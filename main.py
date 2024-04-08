@@ -1,7 +1,7 @@
 import sys
 import chess
 
-from yuri_db import calculate_yuri
+from yuri_db import calculate_yuri, HASH_NUDGED_PREFIX, REVERSE_HASH_NUDGED_PREFIX
 from yuri_state import YuriChessState
 
 do_debug = False
@@ -96,13 +96,13 @@ def search_moves(command, state):
 	for move in yuried_moves:
 		print("info currmove {} score cp {}".format(move["Name"], state.current_eval_func(move)))
 
-	first_best_move = best_move(yuried_moves, state.current_eval_func)
+	first_best_move = best_move(yuried_moves, state.current_eval_func, state.min_or_max)
 
 	state.last_best_move = resolve_tiebreaker(first_best_move, yuried_moves, state.current_eval_func, state.backup_eval_func)
 
 	print_info("I think the best move is {} with {} points and {} backup points.".format(state.last_best_move["Name"], state.current_eval_func(state.last_best_move), state.backup_eval_func(state.last_best_move)))
 
-	if (state.current_board.is_en_passant(state.last_best_move)):
+	if (state.current_board.is_en_passant(chess.Move.from_uci(state.last_best_move["NameUCI"]))):
 		print_info("Holy hell.\n")
 
 	if "infinite" not in command:
@@ -118,7 +118,8 @@ def set_option(command, state):
 		if com == "YuriAttribute":
 			target_attribute = command[i+2]
 			state.current_eval_func = lambda x: x[target_attribute]
-			state.backup_eval_func = lambda x: x["Bonus"+target_attribute]
+			state.backup_eval_func = lambda x: x[HASH_NUDGED_PREFIX + target_attribute]
+			state.bonus_backup_eval_func = lambda x: x[REVERSE_HASH_NUDGED_PREFIX + target_attribute]
 			print_info("Evaluating moves based on {}.".format(target_attribute))
 		if com == "MaximizeYuri":
 			should_max = parse_check(command[i+2])
@@ -130,7 +131,7 @@ def uci_intro(_, __):
 	   "id author The Internet's Beloved Princess Grace\n"
 	   "option name YuriAttribute type combo default MaxYuri var Sum var Gayness var Boldness var Commitment var Lewdness\n"
 	   "option name MaximizeYuri type check default true\n"
-	   "nuciok"),
+	   "uciok"),
 
 def no_op(_, __):
 	pass
@@ -149,7 +150,7 @@ uci_commands = {
 	"": no_op
 }
 
-print_info("Welcome to YuriChess!")
+print_info("Welcome to YuriFish!")
 
 state = YuriChessState()
 

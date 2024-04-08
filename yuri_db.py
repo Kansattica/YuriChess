@@ -19,7 +19,10 @@ def binary_search(name):
 		
 	return math.floor((ceil + floor) / 2)
 
-lowercase_zone = binary_search('a')
+HASH_NUDGED_PREFIX = "Bonus"
+REVERSE_HASH_NUDGED_PREFIX = "ReverseBonus"
+
+RETURN_PREFIXES = ["", HASH_NUDGED_PREFIX, REVERSE_HASH_NUDGED_PREFIX]
 
 def tucked_binary_search(name):
 	# basically, if the binary search returns either the minimum or maximum value, try to make it something more towards the middle.
@@ -36,10 +39,12 @@ def tucked_binary_search(name):
 
 	# I feel like just the classic number on its own leads to similar problems as the Lowercase Zone where, say, one player moves the same knight around all the time
 	# getting rid of it (and always using hash nudging) does mean there's basically never a tiebreaker needed, but I think the tiebreaker might actually help.
-	if classic_number != lowercase_zone and classic_number > 0 and classic_number < len(yuri_names) - 1: 
-		return (classic_number, hash_nudged)
+	#if classic_number != lowercase_zone and classic_number > 0 and classic_number < len(yuri_names) - 1: 
+		#return (classic_number, hash_nudged)
 
-	return (hash_nudged, reverse_hash_nudged)
+	# why not just return all three numbers and let the engine part sort it out
+
+	return [classic_number, hash_nudged, reverse_hash_nudged]
 
 stdev = 0.6
 firstchunk = stdev*math.sqrt(2*math.pi)
@@ -49,42 +54,42 @@ def normal_distribution(x, mean):
 
 def calculate_yuri(str_to_calc):
 
-	primary_runningweight = secondary_runningweight = 0
-	gayness = boldness = commitment = lewdness = 0
-	bonus_gayness = bonus_boldness = bonus_commitment = bonus_lewdness = 0
+	runningweights = [0,0,0]
 
-	# compute two different means for tiebreakers later
-	(primary_mean, secondary_mean) = tucked_binary_search(str_to_calc)
+	yuri_matrix = {
+		"Gayness" : [0, 0, 0],
+		"Boldness" : [0, 0, 0],
+		"Commitment" : [0, 0, 0],
+		"Lewdness" : [0, 0, 0],
+	}
+
+	# compute every mean for tiebreakers later
+	all_three_means = tucked_binary_search(str_to_calc)
 
 	for i, yuri_obj in enumerate(yuri_names):
-		primary_nameweight = normal_distribution(i, primary_mean)
-		secondary_nameweight = normal_distribution(i, secondary_mean)
-		primary_runningweight += primary_nameweight
-		secondary_runningweight += secondary_nameweight
+		triple_nameweight = list(map(lambda mean: normal_distribution(i, mean), all_three_means))
 
-		gayness += yuri_obj["Gayness"] * primary_nameweight
-		boldness += yuri_obj["Boldness"] * primary_nameweight
-		commitment += yuri_obj["Commitment"] * primary_nameweight
-		lewdness += yuri_obj["Lewdness"] * primary_nameweight
+		#print("info string Weights: " + repr(triple_nameweight))
 
-		bonus_gayness += yuri_obj["Gayness"] * secondary_nameweight
-		bonus_boldness += yuri_obj["Boldness"] * secondary_nameweight
-		bonus_commitment += yuri_obj["Commitment"] * secondary_nameweight
-		bonus_lewdness += yuri_obj["Lewdness"] * secondary_nameweight
+		for i in range(len(runningweights)):
+			runningweights[i] += triple_nameweight[i]
+			yuri_matrix["Gayness"][i] += yuri_obj["Gayness"] * triple_nameweight[i]
+			yuri_matrix["Boldness"][i] += yuri_obj["Boldness"] * triple_nameweight[i]
+			yuri_matrix["Commitment"][i] += yuri_obj["Commitment"] * triple_nameweight[i]
+			yuri_matrix["Lewdness"][i] += yuri_obj["Lewdness"] * triple_nameweight[i]
 
-	return {
-		"Name": str_to_calc,
-		"Gayness": gayness / primary_runningweight,
-		"BonusGayness": bonus_gayness / secondary_runningweight,
-		"Boldness": boldness / primary_runningweight,
-		"BonusBoldness": bonus_boldness / secondary_runningweight,
-		"Commitment": commitment / primary_runningweight,
-		"BonusCommitment": bonus_commitment / secondary_runningweight,
-		"Lewdness": lewdness / primary_runningweight,
-		"BonusLewdness": bonus_lewdness / secondary_runningweight,
-		"Sum": (gayness + boldness + commitment + lewdness) / primary_runningweight,
-		"BonusSum": (bonus_gayness + bonus_boldness + bonus_commitment + bonus_lewdness) / secondary_runningweight
+	to_return = {
+		"Name": str_to_calc
 	}
+
+	for k, v in yuri_matrix.items():
+		for i, val in enumerate(v):
+			to_return[RETURN_PREFIXES[i] + k] = val / runningweights[i]
+	
+	for i, prefix in enumerate(RETURN_PREFIXES):
+		to_return[prefix + "Sum"] = sum(map(lambda x: x[i], yuri_matrix.values())) / runningweights[i]
+
+	return to_return
 
 
 if __name__ == "__main__":
