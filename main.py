@@ -11,8 +11,8 @@ def print_info(str):
 	print("info string " + str)
 
 def init_board(_, state):
-	print_info("Resetting the board")
-	state.current_board = chess.Board()
+	#print_info("Resetting the board")
+	#state.current_board = chess.Board()
 	print("readyok")
 
 def debug(command, state):
@@ -142,8 +142,9 @@ def search_moves(command, state):
 	if (state.current_board.is_en_passant(chess.Move.from_uci(state.last_best_move["NameUCI"]))):
 		print_info("Holy hell.\n")
 
-	if "infinite" not in command:
-		print_best_move(command, state)	
+	# the documentation says "don't stop searching until you get the stop command", but that just makes interactive play with unlimited time hang forever
+	#if "infinite" not in command:
+	print_best_move(command, state)	
 
 def parse_check(checkstr):
 	if checkstr.casefold() == "false":
@@ -234,6 +235,7 @@ for line in sys.stdin:
 		uci_commands[split_command[0]](split_command, state)
 	except KeyError:
 		print_info("Got command {} that I didn't know what to do with.".format(command))
+
 
 	sys.stdout.flush()
 
