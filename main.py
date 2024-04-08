@@ -191,7 +191,7 @@ def set_option(command: list[str], state: YuriChessState):
 def uci_intro(_, __):
 	print("id name YuriFish\n"
 	   "id author The Internet's Beloved Princess Grace\n"
-	   "option name YuriAttribute type combo default MaxYuri var Sum var Gayness var Boldness var Commitment var Lewdness\n"
+	   "option name YuriAttribute type combo default Sum var Sum var Gayness var Boldness var Commitment var Lewdness\n"
 	   "option name MaximizeYuri type check default true\n"
 	   "option name YuriWeight type check default false\n"
 	   "option name NovelMoveWeight type spin default 2\n"
