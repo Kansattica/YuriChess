@@ -1,5 +1,5 @@
 import sys
-from itertools import chain
+from itertools import chain, repeat, chain
 import chess
 
 from yuri_db import calculate_yuri, HASH_NUDGED_PREFIX, REVERSE_HASH_NUDGED_PREFIX
@@ -39,30 +39,28 @@ def setup_pos(command, state):
 		for move in command[curr_idx:]:
 			state.current_board.push_uci(move)
 
-def best_move(legal_moves, evaluation_func, min_or_max):
-	return min_or_max(legal_moves, key=evaluation_func)
-
 def print_best_move(_, state):
 	print("bestmove " + state.last_best_move["NameUCI"])
 
-def move_would_draw(current_board, move_name):
-	algebraic_name = current_board.san(chess.Move.from_uci(move_name))
-	current_board.push_uci(move_name)
-	will_draw = current_board.can_claim_draw() or current_board.is_stalemate() or current_board.is_repetition() or current_board.is_fifty_moves()
-	if will_draw:
-		print_info("Move {} ({}) will {}draw because{}{}{}".format(move_name, algebraic_name, "" if will_draw else "not ", " repetition" if current_board.can_claim_threefold_repetition() else "", " fifty move rule" if current_board.can_claim_fifty_moves() else "", " stalemate" if current_board.is_stalemate() else ""))
-	current_board.pop()
-	return will_draw
+def best_move(legal_moves, evaluation_func, min_or_max):
+	return min_or_max(legal_moves, key=evaluation_func)
 
-def move_to_yuri(move, board):
-	yuricalc = calculate_yuri(board.san(move))
-	yuricalc["NameUCI"] = move.uci()
-	return yuricalc
+def is_repetition(move_name, board_state):
+	board_state.push_uci(move_name)
+	to_return = board_state.is_repetition(1)
+	board_state.pop()
+	
+	return to_return
 
-def resolve_tiebreaker(selected_best_move, selected_backup_best_move, yuri_moves, eval_func, backup_eval_func, yuri_board_state):
-	tied_for_best = list(chain(
-		filter(lambda x: eval_func(x) == eval_func(selected_best_move), yuri_moves),
-		filter(lambda x: eval_func(x) == backup_eval_func(selected_backup_best_move), yuri_moves)))
+def resolve_tiebreaker(selected_best_move, selected_backup_best_move, yuri_moves, eval_func, backup_eval_func, board_state):
+	tied_for_best = list(
+		chain.from_iterable(
+			# if a move is a repetition, make it less likely to be picked
+			map(lambda x: repeat(x, 1 if is_repetition(x["NameUCI"], board_state) else 2),
+			chain(
+				filter(lambda x: eval_func(x) == eval_func(selected_best_move), yuri_moves),
+				filter(lambda x: backup_eval_func(x) == backup_eval_func(selected_backup_best_move), yuri_moves)
+		))))
 
 	if len(tied_for_best) < 2:
 		print_info("No tiebreaker to be done here.")
@@ -85,16 +83,27 @@ def resolve_tiebreaker(selected_best_move, selected_backup_best_move, yuri_moves
 
 	# Because yuri exists in the world (and because I think it's useful for the tiebreaker to be sensitive to changes in board state to prevent loops), mix in the board state
 	# use the hashnudged version of the board state because I suspect the regular version will fall into the lowercase letter pit a lot.
-	return tied_for_best[int(eval_func(selected_best_move) * backup_eval_func(selected_backup_best_move) * backup_eval_func(yuri_board_state)) % len(tied_for_best)]
+	return tied_for_best[int(eval_func(selected_best_move) * backup_eval_func(selected_backup_best_move) * backup_eval_func(calculate_yuri(repr(board_state)))) % len(tied_for_best)]
 
+def move_would_draw(current_board, move_name):
+	algebraic_name = current_board.san(chess.Move.from_uci(move_name))
+	current_board.push_uci(move_name)
+	will_draw = current_board.can_claim_draw() or current_board.is_stalemate() or current_board.is_repetition() or current_board.is_fifty_moves()
+	if will_draw:
+		print_info("Move {} ({}) will {}draw because{}{}{}".format(move_name, algebraic_name, "" if will_draw else "not ", " repetition" if current_board.can_claim_threefold_repetition() else "", " fifty move rule" if current_board.can_claim_fifty_moves() else "", " stalemate" if current_board.is_stalemate() else ""))
+	current_board.pop()
+	return will_draw
+
+def move_to_yuri(move, board):
+	yuricalc = calculate_yuri(board.san(move))
+	yuricalc["NameUCI"] = move.uci()
+	return yuricalc
 
 def search_moves(command, state):
 	if "go" != command[0]:
 		print_info("Weird, this command should start with 'go'. Instead, it's {}.".format(command))
 
 	yuried_moves = list(filter(lambda x: move_would_draw(state.current_board, x["NameUCI"]) == False, map(lambda m: move_to_yuri(m, state.current_board), state.current_board.legal_moves)))
-
-	yuri_board_state = calculate_yuri(repr(state.current_board))
 
 	if not yuried_moves:
 		print_info("All moves would draw or something! Playing the gayest move regardless.")
@@ -104,12 +113,13 @@ def search_moves(command, state):
 		yuried_moves = [x for x in yuried_moves if x["NameUCI"] in command]
 
 	for move in yuried_moves:
-		print("info currmove {} score cp {}".format(move["Name"], state.current_eval_func(move)))
+		print("info currmove {} score cp {} nodes {}".format(move["Name"], state.current_eval_func(move), len(yuried_moves) * 2))
+		print("info currmove {} score cp {} nodes {}".format(move["Name"], state.backup_eval_func(move), len(yuried_moves) * 2))
 
 	first_best_move = best_move(yuried_moves, state.current_eval_func, state.min_or_max)
 	best_backup_move = best_move(yuried_moves, state.backup_eval_func, state.min_or_max)
 
-	state.last_best_move = resolve_tiebreaker(first_best_move, best_backup_move, yuried_moves, state.current_eval_func, state.backup_eval_func, yuri_board_state)
+	state.last_best_move = resolve_tiebreaker(first_best_move, best_backup_move, yuried_moves, state.current_eval_func, state.backup_eval_func, state.current_board)
 
 	print_info("I think the best move is {} with {} points and {} backup points.".format(state.last_best_move["Name"], state.current_eval_func(state.last_best_move), state.backup_eval_func(state.last_best_move)))
 
