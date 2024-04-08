@@ -28,13 +28,18 @@ def tucked_binary_search(name):
 
 	classic_number = binary_search(name)
 
-	# if our number is a valid index into the yurinames array, it's fine
-	# strings starting with a lowercase letter tend to always wind up in the same place, so hash those, too.
-	if classic_number != lowercase_zone and classic_number > 0 and classic_number < len(yuri_names) - 1: 
-		return classic_number
+	# chess moves tend to clump together, so give them a chance to spread out a bit
+	# i call this "hash nudging" because you use these bad hashes of the string to nudge it somewhere else in the array
+ 
+	hash_nudged = sum(map(lambda x: ord(x[1]) * x[0],  enumerate(name, start=1)), classic_number) % len(yuri_names)
+	reverse_hash_nudged = sum(map(lambda x: ord(x[1]) * x[0],  enumerate(reversed(name), start=1)), classic_number) % len(yuri_names)
 
-	# otherwise, calculate a really bad hash and take it mod the length of the array to get a number that works as an array index
-	return sum(map(lambda x: ord(x[1]) * x[0],  enumerate(name, start=1)), classic_number) % len(yuri_names)
+	# I feel like just the classic number on its own leads to similar problems as the Lowercase Zone where, say, one player moves the same knight around all the time
+	# getting rid of it does mean there's basically
+	#if classic_number != lowercase_zone and classic_number > 0 and classic_number < len(yuri_names) - 1: 
+		#return (classic_number, first_fallback)
+
+	return (hash_nudged, reverse_hash_nudged)
 
 stdev = 0.6
 firstchunk = stdev*math.sqrt(2*math.pi)
@@ -44,27 +49,41 @@ def normal_distribution(x, mean):
 
 def calculate_yuri(str_to_calc):
 
-	runningweight = 0
+	primary_runningweight = secondary_runningweight = 0
 	gayness = boldness = commitment = lewdness = 0
+	bonus_gayness = bonus_boldness = bonus_commitment = bonus_lewdness = 0
 
-	mean = tucked_binary_search(str_to_calc)
+	# compute two different means for tiebreakers later
+	(primary_mean, secondary_mean) = tucked_binary_search(str_to_calc)
 
 	for i, yuri_obj in enumerate(yuri_names):
-		nameweight = normal_distribution(i, mean)
-		runningweight += nameweight
+		primary_nameweight = normal_distribution(i, primary_mean)
+		secondary_nameweight = normal_distribution(i, secondary_mean)
+		primary_runningweight += primary_nameweight
+		secondary_runningweight += secondary_nameweight
 
-		gayness += yuri_obj["Gayness"] * nameweight
-		boldness += yuri_obj["Boldness"] * nameweight
-		commitment += yuri_obj["Commitment"] * nameweight
-		lewdness += yuri_obj["Lewdness"] * nameweight
+		gayness += yuri_obj["Gayness"] * primary_nameweight
+		boldness += yuri_obj["Boldness"] * primary_nameweight
+		commitment += yuri_obj["Commitment"] * primary_nameweight
+		lewdness += yuri_obj["Lewdness"] * primary_nameweight
+
+		bonus_gayness += yuri_obj["Gayness"] * secondary_nameweight
+		bonus_boldness += yuri_obj["Boldness"] * secondary_nameweight
+		bonus_commitment += yuri_obj["Commitment"] * secondary_nameweight
+		bonus_lewdness += yuri_obj["Lewdness"] * secondary_nameweight
 
 	return {
 		"Name": str_to_calc,
-		"Gayness": gayness / runningweight,
-		"Boldness": boldness / runningweight,
-		"Commitment": commitment / runningweight,
-		"Lewdness": lewdness / runningweight,
-		"Sum": (gayness + boldness + commitment + lewdness) / runningweight
+		"Gayness": gayness / primary_runningweight,
+		"BonusGayness": bonus_gayness / secondary_runningweight,
+		"Boldness": boldness / primary_runningweight,
+		"BonusBoldness": bonus_boldness / secondary_runningweight,
+		"Commitment": commitment / primary_runningweight,
+		"BonusCommitment": bonus_commitment / secondary_runningweight,
+		"Lewdness": lewdness / primary_runningweight,
+		"BonusLewdness": bonus_lewdness / secondary_runningweight,
+		"Sum": (gayness + boldness + commitment + lewdness) / primary_runningweight,
+		"BonusSum": (bonus_gayness + bonus_boldness + bonus_commitment + bonus_lewdness) / secondary_runningweight
 	}
 
 
