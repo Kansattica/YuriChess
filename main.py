@@ -1,4 +1,5 @@
 import sys
+from itertools import chain
 import chess
 
 from yuri_db import calculate_yuri, HASH_NUDGED_PREFIX, REVERSE_HASH_NUDGED_PREFIX
@@ -58,8 +59,11 @@ def move_to_yuri(move, board):
 	yuricalc["NameUCI"] = move.uci()
 	return yuricalc
 
-def resolve_tiebreaker(selected_best_move, yuri_moves, eval_func, backup_eval_func):
-	tied_for_best = list(filter(lambda x: eval_func(x) == eval_func(selected_best_move), yuri_moves))
+def resolve_tiebreaker(selected_best_move, selected_backup_best_move, yuri_moves, eval_func, backup_eval_func, yuri_board_state):
+	tied_for_best = list(chain(
+		filter(lambda x: eval_func(x) == eval_func(selected_best_move), yuri_moves),
+		filter(lambda x: eval_func(x) == backup_eval_func(selected_backup_best_move), yuri_moves)))
+
 	if len(tied_for_best) < 2:
 		print_info("No tiebreaker to be done here.")
 		return selected_best_move
@@ -69,6 +73,7 @@ def resolve_tiebreaker(selected_best_move, yuri_moves, eval_func, backup_eval_fu
 	# I think the modulo method is better because it's more sensitive to board states (a slight change in legal moves or the exact move being played tends to completely change the output)
 	# Since I already wrote the backup stuff, I've decided to use the backup eval function to help "seed" the modulo so it gets to be part of the outcome.
 	# Is that not yuri?
+	# We also mix in the moves the backup evaluation function likes the best to both hopefully break out of loops and add some variety.
 
 	#new_best_move = best_move(tied_for_best, backup_eval_func)
 	#tied_for_tiebreaker_best = list(filter(lambda x: backup_eval_func(x) == backup_eval_func(new_best_move), yuri_moves))
@@ -78,13 +83,18 @@ def resolve_tiebreaker(selected_best_move, yuri_moves, eval_func, backup_eval_fu
 
 	#print_info("Resolving double tiebreaker between {} moves: {}".format(len(tied_for_tiebreaker_best)," ".join(map(lambda x: x["Name"], tied_for_tiebreaker_best)) ))
 
-	return tied_for_best[int(eval_func(selected_best_move) * backup_eval_func(selected_best_move)) % len(tied_for_best)]
+	# Because yuri exists in the world (and because I think it's useful for the tiebreaker to be sensitive to changes in board state to prevent loops), mix in the board state
+	# use the hashnudged version of the board state because I suspect the regular version will fall into the lowercase letter pit a lot.
+	return tied_for_best[int(eval_func(selected_best_move) * backup_eval_func(selected_backup_best_move) * backup_eval_func(yuri_board_state)) % len(tied_for_best)]
+
 
 def search_moves(command, state):
 	if "go" != command[0]:
 		print_info("Weird, this command should start with 'go'. Instead, it's {}.".format(command))
 
 	yuried_moves = list(filter(lambda x: move_would_draw(state.current_board, x["NameUCI"]) == False, map(lambda m: move_to_yuri(m, state.current_board), state.current_board.legal_moves)))
+
+	yuri_board_state = calculate_yuri(repr(state.current_board))
 
 	if not yuried_moves:
 		print_info("All moves would draw or something! Playing the gayest move regardless.")
@@ -97,8 +107,9 @@ def search_moves(command, state):
 		print("info currmove {} score cp {}".format(move["Name"], state.current_eval_func(move)))
 
 	first_best_move = best_move(yuried_moves, state.current_eval_func, state.min_or_max)
+	best_backup_move = best_move(yuried_moves, state.backup_eval_func, state.min_or_max)
 
-	state.last_best_move = resolve_tiebreaker(first_best_move, yuried_moves, state.current_eval_func, state.backup_eval_func)
+	state.last_best_move = resolve_tiebreaker(first_best_move, best_backup_move, yuried_moves, state.current_eval_func, state.backup_eval_func, yuri_board_state)
 
 	print_info("I think the best move is {} with {} points and {} backup points.".format(state.last_best_move["Name"], state.current_eval_func(state.last_best_move), state.backup_eval_func(state.last_best_move)))
 
