@@ -35,9 +35,9 @@ def tucked_binary_search(name):
 	reverse_hash_nudged = sum(map(lambda x: ord(x[1]) * x[0],  enumerate(reversed(name), start=1)), classic_number) % len(yuri_names)
 
 	# I feel like just the classic number on its own leads to similar problems as the Lowercase Zone where, say, one player moves the same knight around all the time
-	# getting rid of it does mean there's basically
-	#if classic_number != lowercase_zone and classic_number > 0 and classic_number < len(yuri_names) - 1: 
-		#return (classic_number, first_fallback)
+	# getting rid of it (and always using hash nudging) does mean there's basically never a tiebreaker needed, but I think the tiebreaker might actually help.
+	if classic_number != lowercase_zone and classic_number > 0 and classic_number < len(yuri_names) - 1: 
+		return (classic_number, hash_nudged)
 
 	return (hash_nudged, reverse_hash_nudged)
 
