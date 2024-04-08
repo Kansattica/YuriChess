@@ -45,18 +45,34 @@ def print_best_move(_, state):
 def best_move(legal_moves, evaluation_func, min_or_max):
 	return min_or_max(legal_moves, key=evaluation_func)
 
-def is_repetition(move_name, board_state):
-	board_state.push_uci(move_name)
-	to_return = board_state.is_repetition(1)
-	board_state.pop()
-	
-	return to_return
 
-def resolve_tiebreaker(selected_best_move, selected_backup_best_move, yuri_moves, eval_func, backup_eval_func, board_state):
+def calculate_move_weight(move_name, state):
+	weight = 1
+
+	move = chess.Move.from_uci(move_name)
+
+	weight += state.check_weight * state.current_board.gives_check(move)
+	weight += state.en_passant_weight * state.current_board.is_en_passant(move)
+	weight += state.capture_weight * state.current_board.is_capture(move)
+
+	state.current_board.push(move)
+
+	# weigh novel moves (that don't lead to repeated board states) more heavily
+	weight += (state.novel_move_weight * (not state.current_board.is_repetition(1)))
+	weight += (state.checkmate_weight * (not state.current_board.is_checkmate()))
+
+	state.current_board.pop()
+
+	print_info("move {} has tiebreaker weight {}".format(move_name, weight))
+
+	return weight
+
+
+def resolve_tiebreaker(selected_best_move, selected_backup_best_move, yuri_moves, eval_func, backup_eval_func, state):
 	tied_for_best = list(
 		chain.from_iterable(
 			# if a move is a repetition, make it less likely to be picked
-			map(lambda x: repeat(x, 1 if is_repetition(x["NameUCI"], board_state) else 2),
+			map(lambda x: repeat(x, calculate_move_weight(x["NameUCI"], state)),
 			chain(
 				filter(lambda x: eval_func(x) == eval_func(selected_best_move), yuri_moves),
 				filter(lambda x: backup_eval_func(x) == backup_eval_func(selected_backup_best_move), yuri_moves)
@@ -65,7 +81,7 @@ def resolve_tiebreaker(selected_best_move, selected_backup_best_move, yuri_moves
 	if len(tied_for_best) < 2:
 		print_info("No tiebreaker to be done here.")
 		return selected_best_move
-	print_info("Resolving tiebreaker between {} moves: {}".format(len(tied_for_best), " ".join(map(lambda x: x["Name"], tied_for_best))))
+	print_info("Resolving tiebreaker between {} weighted moves: {}".format(len(tied_for_best), " ".join(map(lambda x: x["Name"], tied_for_best))))
 
 	# so the backup tiebreaker works, but it tends to lead to loops because it likes to pick the same two moves over and over
 	# I think the modulo method is better because it's more sensitive to board states (a slight change in legal moves or the exact move being played tends to completely change the output)
@@ -83,7 +99,7 @@ def resolve_tiebreaker(selected_best_move, selected_backup_best_move, yuri_moves
 
 	# Because yuri exists in the world (and because I think it's useful for the tiebreaker to be sensitive to changes in board state to prevent loops), mix in the board state
 	# use the hashnudged version of the board state because I suspect the regular version will fall into the lowercase letter pit a lot.
-	return tied_for_best[int(eval_func(selected_best_move) * backup_eval_func(selected_backup_best_move) * backup_eval_func(calculate_yuri(repr(board_state)))) % len(tied_for_best)]
+	return tied_for_best[int(eval_func(selected_best_move) * backup_eval_func(selected_backup_best_move) * backup_eval_func(calculate_yuri(repr(state.current_board)))) % len(tied_for_best)]
 
 def move_would_draw(current_board, move_name):
 	algebraic_name = current_board.san(chess.Move.from_uci(move_name))
@@ -119,7 +135,7 @@ def search_moves(command, state):
 	first_best_move = best_move(yuried_moves, state.current_eval_func, state.min_or_max)
 	best_backup_move = best_move(yuried_moves, state.backup_eval_func, state.min_or_max)
 
-	state.last_best_move = resolve_tiebreaker(first_best_move, best_backup_move, yuried_moves, state.current_eval_func, state.backup_eval_func, state.current_board)
+	state.last_best_move = resolve_tiebreaker(first_best_move, best_backup_move, yuried_moves, state.current_eval_func, state.backup_eval_func, state)
 
 	print_info("I think the best move is {} with {} points and {} backup points.".format(state.last_best_move["Name"], state.current_eval_func(state.last_best_move), state.backup_eval_func(state.last_best_move)))
 
@@ -134,24 +150,55 @@ def parse_check(checkstr):
 		return False
 	return True
 
-def set_option(command, state):
+def set_option(command: list[str], state: YuriChessState):
 	for i, com in enumerate(command):
 		if com == "YuriAttribute":
-			target_attribute = command[i+2]
-			state.current_eval_func = lambda x: x[target_attribute]
-			state.backup_eval_func = lambda x: x[HASH_NUDGED_PREFIX + target_attribute]
-			state.bonus_backup_eval_func = lambda x: x[REVERSE_HASH_NUDGED_PREFIX + target_attribute]
-			print_info("Evaluating moves based on {}.".format(target_attribute))
+			option_arg = command[i+2]
+			state.current_eval_func = lambda x: x[option_arg]
+			state.backup_eval_func = lambda x: x[HASH_NUDGED_PREFIX + option_arg]
+			state.bonus_backup_eval_func = lambda x: x[REVERSE_HASH_NUDGED_PREFIX + option_arg]
+			print_info("Evaluating moves based on {}.".format(option_arg))
 		if com == "MaximizeYuri":
 			should_max = parse_check(command[i+2])
 			state.min_or_max = max if should_max else min
 			print_info("{} the appropriate yuri attribute.".format("Maximizing" if should_max else "Minimizing"))
+		if com == "NovelMoveWeight":
+			state.novel_move_weight = int(command[i+2])
+			print_info("When breaking ties, novel moves are {} times more likely.".format(state.novel_move_weight))
+		if com == "CheckWeight":
+			state.check_weight = int(command[i+2])
+			print_info("When breaking ties, moves that put the opponent in check are {} times more likely.".format(state.check_weight))
+		if com == "CheckmateWeight":
+			state.checkmate_weight = int(command[i+2])
+			print_info("When breaking ties, moves that put the opponent in checkmate are {} times more likely.".format(state.checkmate_weight))
+		if com == "CaptureWeight":
+			state.capture_weight = int(command[i+2])
+			print_info("When breaking ties, moves that capture an opponent's piece are {} times more likely.".format(state.capture_weight))
+		if com == "EnPassantWeight":
+			state.en_passant_weight = int(command[i+2])
+			print_info("When breaking ties, en passant moves are {} times more likely. Holy hell.".format(state.en_passant_weight))
+		if com == "YuriWeight":
+			if parse_check(command[i+2]):
+				print_info("Doing yuri weighting. Asking the evaluation function what scores it applies to each weight. Hope you set YuriAttribute and MaximizeYuri how you wanted!")
+				state.novel_move_weight = int(state.current_eval_func(calculate_yuri("Novel")))
+				state.check_weight = int(state.current_eval_func(calculate_yuri("Check")))
+				state.checkmate_weight = int(state.current_eval_func(calculate_yuri("Checkmate")))
+				state.capture_weight = int(state.current_eval_func(calculate_yuri("Capture")))
+				state.en_passant_weight = int(state.current_eval_func(calculate_yuri("En Passant")))
+				print_info("New weights: Novel: {} Check: {} Checkmate: {} Capture: {} En Passant: {}", state.novel_move_weight, state.check_weight, state.checkmate_weight, state.capture_weight, state.en_passant_weight)
+		
 
 def uci_intro(_, __):
 	print("id name YuriFish\n"
 	   "id author The Internet's Beloved Princess Grace\n"
 	   "option name YuriAttribute type combo default MaxYuri var Sum var Gayness var Boldness var Commitment var Lewdness\n"
 	   "option name MaximizeYuri type check default true\n"
+	   "option name YuriWeight type check default false\n"
+	   "option name NovelMoveWeight type spin default 2\n"
+	   "option name CheckWeight type spin default 0\n"
+	   "option name CheckmateWeight type spin default 3\n"
+	   "option name CaptureWeight type spin default 0\n"
+	   "option name EnPassantWeight type spin default 2\n"
 	   "uciok"),
 
 def no_op(_, __):
