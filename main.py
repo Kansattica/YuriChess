@@ -51,16 +51,16 @@ def calculate_move_weight(move_name: str, state: YuriChessState):
 
 	move = chess.Move.from_uci(move_name)
 
-	weight += state.check_weight * state.current_board.gives_check(move)
-	weight += state.en_passant_weight * state.current_board.is_en_passant(move)
-	weight += state.capture_weight * state.current_board.is_capture(move)
-	weight += state.promotion_weight * (move.promotion != None)
+	weight *= state.check_weight * state.current_board.gives_check(move)
+	weight *= state.en_passant_weight * state.current_board.is_en_passant(move)
+	weight *= state.capture_weight * state.current_board.is_capture(move)
+	weight *= state.promotion_weight * (move.promotion != None)
 
 	state.current_board.push(move)
 
 	# weigh novel moves (that don't lead to repeated board states) more heavily
-	weight += (state.novel_move_weight * (not state.current_board.is_repetition(1)))
-	weight += (state.checkmate_weight * (not state.current_board.is_checkmate()))
+	weight *= (state.novel_move_weight * (not state.current_board.is_repetition(1)))
+	weight *= (state.checkmate_weight * (not state.current_board.is_checkmate()))
 
 	state.current_board.pop()
 

@@ -10,9 +10,9 @@ class YuriChessState:
 			self.backup_eval_func = lambda x: x["BonusSum"]
 			self.bonus_backup_eval_func = lambda x: x["ReverseBonusSum"]
 			self.novel_move_weight = 2
-			self.check_weight = 0
+			self.check_weight = 1
 			self.checkmate_weight = 3
-			self.capture_weight = 0
+			self.capture_weight = 1
 			self.en_passant_weight = 2
 			self.promotion_weight = 2
 			self.yuri_weight = False
