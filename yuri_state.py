@@ -15,5 +15,6 @@ class YuriChessState:
 			self.capture_weight = 1
 			self.en_passant_weight = 2
 			self.promotion_weight = 2
+			self.queens_kissing_weight = 5
 			self.yuri_weight = False
 

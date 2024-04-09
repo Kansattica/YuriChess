@@ -45,6 +45,16 @@ def print_best_move(_, state):
 def best_move(legal_moves, evaluation_func, min_or_max):
 	return min_or_max(legal_moves, key=evaluation_func)
 
+# If this move would put a queen next to another queen, then love wins
+def queens_kissing(board: chess.Board, move: chess.Move):
+	if board.piece_type_at(move.from_square) != chess.QUEEN:
+		return False
+
+	for queen_square in chain(board.pieces(chess.QUEEN, chess.WHITE), board.pieces(chess.QUEEN, chess.BLACK)):
+		if chess.square_distance(move.to_square, queen_square) == 1:
+			return True
+		
+	return False
 
 def calculate_move_weight(move_name: str, state: YuriChessState):
 	weight = 1
@@ -56,6 +66,7 @@ def calculate_move_weight(move_name: str, state: YuriChessState):
 	weight *= max(1, state.en_passant_weight * state.current_board.is_en_passant(move))
 	weight *= max(1, state.capture_weight * state.current_board.is_capture(move))
 	weight *= max(1, state.promotion_weight * (move.promotion != None))
+	weight *= max(1, state.queens_kissing_weight * queens_kissing(state.current_board, move))
 
 	state.current_board.push(move)
 
@@ -117,7 +128,7 @@ def move_to_yuri(move, board):
 	yuricalc["NameUCI"] = move.uci()
 	return yuricalc
 
-def search_moves(command, state):
+def search_moves(command: list[str], state: YuriChessState):
 	if "go" != command[0]:
 		print_info("Weird, this command should start with 'go'. Instead, it's {}.".format(command))
 
@@ -141,8 +152,12 @@ def search_moves(command, state):
 
 	print_info("I think the best move is {} with {} points and {} backup points.".format(state.last_best_move["Name"], state.current_eval_func(state.last_best_move), state.backup_eval_func(state.last_best_move)))
 
-	if (state.current_board.is_en_passant(chess.Move.from_uci(state.last_best_move["NameUCI"]))):
-		print_info("Holy hell.\n")
+	chosen_move = chess.Move.from_uci(state.last_best_move["NameUCI"])
+	if (state.current_board.is_en_passant(chosen_move)):
+		print_info("Holy hell.")
+	
+	if (queens_kissing(state.current_board, chosen_move)):
+		print_info("Love wins!")
 
 	# the documentation says "don't stop searching until you get the stop command", but that just makes interactive play with unlimited time hang forever
 	#if "infinite" not in command:
@@ -200,7 +215,13 @@ def set_option(command: list[str], state: YuriChessState):
 				print_info("Not setting PromotionWeight because yuri_weight already set!")
 				break
 			state.promotion_weight = int(command[i+2])
-			print_info("When breaking ties, promotion moves are {} times more likely.".format(state.en_passant_weight))
+			print_info("When breaking ties, promotion moves are {} times more likely.".format(state.promotion_weight))
+		if com == "QueensKissingWeight":
+			if state.yuri_weight:
+				print_info("Not setting QueensKissingWeight because yuri_weight already set!")
+				break
+			state.queens_kissing_weight = int(command[i+2])
+			print_info("When breaking ties, moves that put one queen next to another are {} times more likely.".format(state.queens_kissing_weight))
 		if com == "YuriWeight":
 			if parse_check(command[i+2]):
 				state.yuri_weight = True
@@ -211,7 +232,8 @@ def set_option(command: list[str], state: YuriChessState):
 				state.capture_weight = int(state.current_eval_func(calculate_yuri("Capture")))
 				state.en_passant_weight = int(state.current_eval_func(calculate_yuri("En Passant")))
 				state.promotion_weight = int(state.current_eval_func(calculate_yuri("Promotion")))
-				print_info("New weights: Novel: {} Check: {} Checkmate: {} Capture: {} En Passant: {} Promotion: {}".format(state.novel_move_weight, state.check_weight, state.checkmate_weight, state.capture_weight, state.en_passant_weight, state.promotion_weight))
+				state.queens_kissing_weight = int(state.current_eval_func(calculate_yuri("Queens Kissing")))
+				print_info("New weights: Novel: {} Check: {} Checkmate: {} Capture: {} En Passant: {} Promotion: {} Queens Kissing: {}".format(state.novel_move_weight, state.check_weight, state.checkmate_weight, state.capture_weight, state.en_passant_weight, state.promotion_weight, state.queens_kissing_weight))
 		
 
 def uci_intro(_, __):
@@ -221,10 +243,12 @@ def uci_intro(_, __):
 	   "option name MaximizeYuri type check default true\n"
 	   "option name YuriWeight type check default false\n"
 	   "option name NovelMoveWeight type spin default 2\n"
-	   "option name CheckWeight type spin default 0\n"
+	   "option name CheckWeight type spin default 1\n"
 	   "option name CheckmateWeight type spin default 3\n"
-	   "option name CaptureWeight type spin default 0\n"
+	   "option name CaptureWeight type spin default 1\n"
 	   "option name EnPassantWeight type spin default 2\n"
+	   "option name PromotionWeight type spin default 2\n"
+	   "option name QueensKissingWeight type spin default 2\n"
 	   "uciok"),
 
 def no_op(_, __):
