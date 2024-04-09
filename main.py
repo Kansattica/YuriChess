@@ -102,7 +102,7 @@ def resolve_tiebreaker(selected_best_move, selected_backup_best_move, yuri_moves
 	return tied_for_best[int(eval_func(selected_best_move) * backup_eval_func(selected_backup_best_move) * backup_eval_func(calculate_yuri(repr(state.current_board)))) % len(tied_for_best)]
 
 def move_would_draw(current_board, move_name):
-	algebraic_name = current_board.san(chess.Move.from_uci(move_name))
+	algebraic_name = current_board.lan(chess.Move.from_uci(move_name))
 	current_board.push_uci(move_name)
 	will_draw = current_board.can_claim_draw() or current_board.is_stalemate() or current_board.is_repetition() or current_board.is_fifty_moves()
 	if will_draw:
@@ -111,7 +111,7 @@ def move_would_draw(current_board, move_name):
 	return will_draw
 
 def move_to_yuri(move, board):
-	yuricalc = calculate_yuri(board.san(move))
+	yuricalc = calculate_yuri(board.lan(move))
 	yuricalc["NameUCI"] = move.uci()
 	return yuricalc
 
@@ -186,7 +186,7 @@ def set_option(command: list[str], state: YuriChessState):
 				state.checkmate_weight = int(state.current_eval_func(calculate_yuri("Checkmate")))
 				state.capture_weight = int(state.current_eval_func(calculate_yuri("Capture")))
 				state.en_passant_weight = int(state.current_eval_func(calculate_yuri("En Passant")))
-				print_info("New weights: Novel: {} Check: {} Checkmate: {} Capture: {} En Passant: {}", state.novel_move_weight, state.check_weight, state.checkmate_weight, state.capture_weight, state.en_passant_weight)
+				print_info("New weights: Novel: {} Check: {} Checkmate: {} Capture: {} En Passant: {}".format(state.novel_move_weight, state.check_weight, state.checkmate_weight, state.capture_weight, state.en_passant_weight))
 		
 
 def uci_intro(_, __):
