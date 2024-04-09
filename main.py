@@ -129,8 +129,8 @@ def search_moves(command, state):
 		yuried_moves = [x for x in yuried_moves if x["NameUCI"] in command]
 
 	for move in yuried_moves:
-		print("info currmove {0} score cp {1} nodes {2} depth 1 seldepth 2 hashfull 0".format(move["Name"], int(state.current_eval_func(move) * 100), len(yuried_moves) * 2))
-		print("info currmove {0} score cp {1} nodes {2} depth 1 seldepth 2 hashfull 0".format(move["Name"], int(state.backup_eval_func(move) * 100), len(yuried_moves) * 2))
+		print("info currmove {0} score cp {1} nodes {2} depth 1 seldepth 2 hashfull 0".format(move["NameUCI"], int(state.current_eval_func(move) * 100), len(yuried_moves) * 2))
+		print("info currmove {0} score cp {1} nodes {2} depth 1 seldepth 2 hashfull 0".format(move["NameUCI"], int(state.backup_eval_func(move) * 100), len(yuried_moves) * 2))
 
 	first_best_move = best_move(yuried_moves, state.current_eval_func, state.min_or_max)
 	best_backup_move = best_move(yuried_moves, state.backup_eval_func, state.min_or_max)
@@ -164,23 +164,39 @@ def set_option(command: list[str], state: YuriChessState):
 			state.min_or_max = max if should_max else min
 			print_info("{} the appropriate yuri attribute.".format("Maximizing" if should_max else "Minimizing"))
 		if com == "NovelMoveWeight":
+			if state.yuri_weight:
+				print_info("Not setting NovelMoveWeight because yuri_weight already set!")
+				break
 			state.novel_move_weight = int(command[i+2])
 			print_info("When breaking ties, novel moves are {} times more likely.".format(state.novel_move_weight))
 		if com == "CheckWeight":
+			if state.yuri_weight:
+				print_info("Not setting CheckWeight because yuri_weight already set!")
+				break
 			state.check_weight = int(command[i+2])
 			print_info("When breaking ties, moves that put the opponent in check are {} times more likely.".format(state.check_weight))
 		if com == "CheckmateWeight":
+			if state.yuri_weight:
+				print_info("Not setting CheckmateWeight because yuri_weight already set!")
+				break
 			state.checkmate_weight = int(command[i+2])
 			print_info("When breaking ties, moves that put the opponent in checkmate are {} times more likely.".format(state.checkmate_weight))
 		if com == "CaptureWeight":
+			if state.yuri_weight:
+				print_info("Not setting CaptureWeight because yuri_weight already set!")
+				break
 			state.capture_weight = int(command[i+2])
 			print_info("When breaking ties, moves that capture an opponent's piece are {} times more likely.".format(state.capture_weight))
 		if com == "EnPassantWeight":
+			if state.yuri_weight:
+				print_info("Not setting EnPassantWeight because yuri_weight already set!")
+				break
 			state.en_passant_weight = int(command[i+2])
 			print_info("When breaking ties, en passant moves are {} times more likely. Holy hell.".format(state.en_passant_weight))
 		if com == "YuriWeight":
 			if parse_check(command[i+2]):
-				print_info("Doing yuri weighting. Asking the evaluation function what scores it applies to each weight. Hope you set YuriAttribute and MaximizeYuri how you wanted!")
+				state.yuri_weight = True
+				print_info("Doing yuri weighting. Asking the evaluation function what scores it applies to each weight. Hope you set YuriAttribute how you wanted!")
 				state.novel_move_weight = int(state.current_eval_func(calculate_yuri("Novel")))
 				state.check_weight = int(state.current_eval_func(calculate_yuri("Check")))
 				state.checkmate_weight = int(state.current_eval_func(calculate_yuri("Checkmate")))

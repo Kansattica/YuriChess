@@ -14,4 +14,5 @@ class YuriChessState:
 			self.checkmate_weight = 3
 			self.capture_weight = 0
 			self.en_passant_weight = 2
+			self.yuri_weight = False
 
