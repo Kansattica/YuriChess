@@ -143,7 +143,7 @@ def search_moves(command: list[str], state: YuriChessState):
 
 	for move in yuried_moves:
 		print("info currmove {0} score cp {1} nodes {2} depth 1 seldepth 2 hashfull 0".format(move["NameUCI"], int(state.current_eval_func(move) * 100), len(yuried_moves) * 2))
-		print("info currmove {0} score cp {1} nodes {2} depth 1 seldepth 2 hashfull 0".format(move["NameUCI"], int(state.backup_eval_func(move) * 100), len(yuried_moves) * 2))
+		#print("info currmove {0} score cp {1} nodes {2} depth 1 seldepth 2 hashfull 0".format(move["NameUCI"], int(state.backup_eval_func(move) * 100), len(yuried_moves) * 2))
 
 	first_best_move = best_move(yuried_moves, state.current_eval_func, state.min_or_max)
 	best_backup_move = best_move(yuried_moves, state.backup_eval_func, state.min_or_max)
