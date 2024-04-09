@@ -129,8 +129,8 @@ def search_moves(command, state):
 		yuried_moves = [x for x in yuried_moves if x["NameUCI"] in command]
 
 	for move in yuried_moves:
-		print("info currmove {0} score cp {1} nodes {2} depth 1 seldepth 2 pv {0} hashfull 0".format(move["Name"], int(state.current_eval_func(move) * 100), len(yuried_moves) * 2))
-		print("info currmove {0} score cp {1} nodes {2} depth 1 seldepth 2 pv {0} hashfull 0".format(move["Name"], int(state.backup_eval_func(move) * 100), len(yuried_moves) * 2))
+		print("info currmove {0} score cp {1} nodes {2} depth 1 seldepth 2 hashfull 0".format(move["Name"], int(state.current_eval_func(move) * 100), len(yuried_moves) * 2))
+		print("info currmove {0} score cp {1} nodes {2} depth 1 seldepth 2 hashfull 0".format(move["Name"], int(state.backup_eval_func(move) * 100), len(yuried_moves) * 2))
 
 	first_best_move = best_move(yuried_moves, state.current_eval_func, state.min_or_max)
 	best_backup_move = best_move(yuried_moves, state.backup_eval_func, state.min_or_max)
