@@ -46,7 +46,7 @@ def best_move(legal_moves, evaluation_func, min_or_max):
 	return min_or_max(legal_moves, key=evaluation_func)
 
 
-def calculate_move_weight(move_name, state):
+def calculate_move_weight(move_name: str, state: YuriChessState):
 	weight = 1
 
 	move = chess.Move.from_uci(move_name)
@@ -54,6 +54,7 @@ def calculate_move_weight(move_name, state):
 	weight += state.check_weight * state.current_board.gives_check(move)
 	weight += state.en_passant_weight * state.current_board.is_en_passant(move)
 	weight += state.capture_weight * state.current_board.is_capture(move)
+	weight += state.promotion_weight * (move.promotion != None)
 
 	state.current_board.push(move)
 
@@ -193,6 +194,12 @@ def set_option(command: list[str], state: YuriChessState):
 				break
 			state.en_passant_weight = int(command[i+2])
 			print_info("When breaking ties, en passant moves are {} times more likely. Holy hell.".format(state.en_passant_weight))
+		if com == "PromotionWeight":
+			if state.yuri_weight:
+				print_info("Not setting PromotionWeight because yuri_weight already set!")
+				break
+			state.promotion_weight = int(command[i+2])
+			print_info("When breaking ties, promotion moves are {} times more likely.".format(state.en_passant_weight))
 		if com == "YuriWeight":
 			if parse_check(command[i+2]):
 				state.yuri_weight = True
@@ -202,7 +209,8 @@ def set_option(command: list[str], state: YuriChessState):
 				state.checkmate_weight = int(state.current_eval_func(calculate_yuri("Checkmate")))
 				state.capture_weight = int(state.current_eval_func(calculate_yuri("Capture")))
 				state.en_passant_weight = int(state.current_eval_func(calculate_yuri("En Passant")))
-				print_info("New weights: Novel: {} Check: {} Checkmate: {} Capture: {} En Passant: {}".format(state.novel_move_weight, state.check_weight, state.checkmate_weight, state.capture_weight, state.en_passant_weight))
+				state.promotion_weight = int(state.current_eval_func(calculate_yuri("Promotion")))
+				print_info("New weights: Novel: {} Check: {} Checkmate: {} Capture: {} En Passant: {} Promotion: {}".format(state.novel_move_weight, state.check_weight, state.checkmate_weight, state.capture_weight, state.en_passant_weight, state.promotion_weight))
 		
 
 def uci_intro(_, __):
