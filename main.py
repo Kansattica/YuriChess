@@ -16,18 +16,32 @@ def init_board(_, state):
 def debug(command, state):
 	state.do_debug = ("on" in command)
 
+def index_or_negative_one(haystack: list[any], needle: any):
+	try:
+		return haystack.index(needle)
+	except ValueError:
+		return -1
+
 def setup_pos(command, state):
 	if "position" != command[0]:
 		print_info("Weird, this command should start with 'position'. Instead, it's {}.".format(command))
 
 	curr_idx = 1
 
+	move_idx = index_or_negative_one(command, "moves")
+
 	if "startpos" == command[curr_idx]:
 		curr_idx += 1
 		state.current_board = chess.Board()
 	elif "fen" == command[curr_idx]:
-		state.current_board.set_board_fen(command[curr_idx + 1])
-		curr_idx += 2
+		# fen string looks like:
+  		# position fen rnbqkbnr/ppp1pppp/8/8/3q4/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 moves f2f3
+		# note the multiple spaces- we should look for where "moves" is and go based on that
+		# or to the end of the array if there's no moves afterward
+		# also, don't include the string "fen"
+		curr_idx += 1
+		state.current_board.set_fen(" ".join(command[curr_idx:move_idx]))
+		curr_idx = move_idx
 
 	if "moves" in command:
 		if "moves" != command[curr_idx]:
@@ -68,7 +82,7 @@ def calculate_move_weight(move_name: str, state: YuriChessState):
 
 	move = chess.Move.from_uci(move_name)
 
-	max_weight = state.max_weights()
+	max_weight = state.total_weights()
 
 	# Note that a weight of 1 is neutral and a weight of zero has to be max'd up to one so it doesn't make all the weights zero
 	weight *= compute_weight(state.check_weight, "check", state.current_board.gives_check(move), state.maximize_yuri, max_weight, state.do_debug)
@@ -92,18 +106,25 @@ def calculate_move_weight(move_name: str, state: YuriChessState):
 
 def resolve_tiebreaker(selected_best_move, selected_backup_best_move, yuri_moves, eval_func, backup_eval_func, state):
 	tied_for_best = list(
-		chain.from_iterable(
 			# if a move is a repetition, make it less likely to be picked
-			map(lambda x: repeat(x, calculate_move_weight(x["NameUCI"], state)),
+			map(lambda x: (x, calculate_move_weight(x["NameUCI"], state)),
 			chain(
 				filter(lambda x: eval_func(x) == eval_func(selected_best_move), yuri_moves),
 				filter(lambda x: backup_eval_func(x) == backup_eval_func(selected_backup_best_move), yuri_moves)
-		))))
+		)))
+	
 
+	# since we always include selected_backup_best_move, this will probably never actually be used
+	# there's a slight optimization here where if the moves are all the same, we just return that, but it'll happen regardless.
+	# that'd be more worth if our evaluations were actually expensive to compute
 	if len(tied_for_best) < 2:
 		print_info("No tiebreaker to be done here.")
 		return selected_best_move
-	print_info("Resolving tiebreaker between {} weighted moves: {}".format(len(tied_for_best), " ".join(map(lambda x: x["Name"], tied_for_best))))
+
+	sum_weights = sum(map(lambda x: x[1], tied_for_best))
+	print_info("Weights add up to {}.".format(sum_weights))
+
+	print_info("Resolving tiebreaker between {} weighted moves: {}".format(len(tied_for_best), " ".join(map(lambda x: "{} ({})".format(x[0]["Name"], x[1]), tied_for_best))))
 
 	# so the backup tiebreaker works, but it tends to lead to loops because it likes to pick the same two moves over and over
 	# I think the modulo method is better because it's more sensitive to board states (a slight change in legal moves or the exact move being played tends to completely change the output)
@@ -121,7 +142,19 @@ def resolve_tiebreaker(selected_best_move, selected_backup_best_move, yuri_moves
 
 	# Because yuri exists in the world (and because I think it's useful for the tiebreaker to be sensitive to changes in board state to prevent loops), mix in the board state
 	# use the hashnudged version of the board state because I suspect the regular version will fall into the lowercase letter pit a lot.
-	return tied_for_best[int(eval_func(selected_best_move) * backup_eval_func(selected_backup_best_move) * backup_eval_func(calculate_yuri(repr(state.current_board)))) % len(tied_for_best)]
+	# also scale by the combination of the weights we use to make sure that the tiebreaker and weights have at least kind of the same magnitude.
+	yuri_tiebreaker = (int(eval_func(selected_best_move) * backup_eval_func(selected_backup_best_move) * backup_eval_func(calculate_yuri(repr(state.current_board)))) * state.total_weights()) % sum_weights
+
+	weight_so_far = 0
+	for possible_move, this_move_weight in tied_for_best:
+		# each weight bucket is half open because the whole scale goes from [0, sum_weights)- tiebreaker will never be sum_weights because of the modulo operation
+		if yuri_tiebreaker >= weight_so_far and yuri_tiebreaker < (weight_so_far + this_move_weight):
+			print_info("{} (weight {}) is the best move because the tiebreaker value {} is between the accumulated weight {} and this move's weight plus the accumulated weight {}.".format(possible_move["Name"], this_move_weight, yuri_tiebreaker, weight_so_far, weight_so_far + this_move_weight))
+			return possible_move
+		weight_so_far += this_move_weight
+
+	print_info("Aww, beans. I shouldn't have fallen out of the tiebreaker.")
+	return None
 
 def move_would_draw(current_board, move_name):
 	algebraic_name = current_board.lan(chess.Move.from_uci(move_name))
