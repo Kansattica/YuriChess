@@ -122,9 +122,8 @@ def resolve_tiebreaker(selected_best_move, selected_backup_best_move, yuri_moves
 		return selected_best_move
 
 	sum_weights = sum(map(lambda x: x[1], tied_for_best))
-	print_info("Weights add up to {}.".format(sum_weights))
 
-	print_info("Resolving tiebreaker between {} weighted moves: {}".format(len(tied_for_best), " ".join(map(lambda x: "{} ({})".format(x[0]["Name"], x[1]), tied_for_best))))
+	print_info("Resolving tiebreaker between {} weighted moves, total weight {}: {}".format(len(tied_for_best), sum_weights, " ".join(map(lambda x: "{} ({})".format(x[0]["Name"], x[1]), tied_for_best))))
 
 	# so the backup tiebreaker works, but it tends to lead to loops because it likes to pick the same two moves over and over
 	# I think the modulo method is better because it's more sensitive to board states (a slight change in legal moves or the exact move being played tends to completely change the output)
