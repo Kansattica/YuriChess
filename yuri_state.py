@@ -4,8 +4,9 @@ class YuriChessState:
 
 		# When maximize_yuri is false, we want the engine to be kind of the opposite of the default maximize_yuri setting.
 		# That also means that we want to invert the weights by subtracting them all from the maximum weight.
+		# Fun fact: doing this with multiplication means the weights get way too big for the silly weight repeat thing we do.
 		def max_weights(self):
-			return self.novel_move_weight * self.check_weight * self.checkmate_weight*  self.capture_weight * self.en_passant_weight * self.promotion_weight * self.queens_kissing_weight
+			return self.novel_move_weight + self.check_weight + self.checkmate_weight+  self.capture_weight + self.en_passant_weight + self.promotion_weight + self.queens_kissing_weight
 
 		def min_or_max(self):
 			return max if self.maximize_yuri else min
