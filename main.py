@@ -34,7 +34,7 @@ def setup_pos(command, state):
 		curr_idx += 1
 		state.current_board = chess.Board()
 	elif "fen" == command[curr_idx]:
-		# fen string looks like:
+		# fen command looks like:
   		# position fen rnbqkbnr/ppp1pppp/8/8/3q4/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 moves f2f3
 		# note the multiple spaces- we should look for where "moves" is and go based on that
 		# or to the end of the array if there's no moves afterward
