@@ -1,0 +1,5 @@
+uci
+isready
+ucinewgame
+go
+quit
