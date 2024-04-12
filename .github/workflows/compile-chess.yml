@@ -37,3 +37,10 @@ jobs:
         ls -l
     - name: Test built chess.
       run: echo "go\nquit" | ./main.bin
+    - name: Upload a Build Artifact
+      uses: actions/upload-artifact@v4.3.1
+      with:
+        path: main.bin 
+        if-no-files-found: error
+        compression-level: 9
+          
