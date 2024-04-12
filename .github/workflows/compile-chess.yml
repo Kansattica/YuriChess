@@ -23,12 +23,15 @@ jobs:
           - os: ubuntu-latest
             output_name: main.bin
             pycmd: python3.11
+            static_libpython: yes
           - os: macos-latest
             output_name: main.bin
             pycmd: python3.11
+            static_libpython: yes
           - os: windows-latest
             output_name: main.exe
             pycmd: python3.exe
+            static_libpython: no
 
     steps:
     - uses: actions/checkout@v3
@@ -44,8 +47,7 @@ jobs:
       shell: bash
     - name: Compile with Nuitka
       run: |
-        ls ${{ env.pythonLocation }}
-        ${{ matrix.pycmd }} -m nuitka --static-libpython=yes --onefile main.py
+        ${{ matrix.pycmd }} -m nuitka --static-libpython=${{ matrix.static_libpython }} --onefile main.py
     - name: List the directory
       run: |
         ls -l
