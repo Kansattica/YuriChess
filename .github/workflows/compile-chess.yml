@@ -48,6 +48,13 @@ jobs:
         pip install -U nuitka
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
       shell: bash
+    - name: Apt install dependencies
+      run: apt install ccache
+      if: matrix.os == 'ubuntu-latest'
+    - name: Brew install dependencies
+      run: brew install ccache
+      if: matrix.os == 'macos-latest'
+
     - name: Compile with Nuitka
       run: |
         ${{ matrix.pycmd }} -m nuitka --static-libpython=${{ matrix.static_libpython }} --onefile main.py
