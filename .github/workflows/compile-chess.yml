@@ -28,7 +28,7 @@ jobs:
             pycmd: python3.11
           - os: windows-latest
             output_name: main.exe
-            pycmd: python3.11.exe
+            pycmd: python3.exe
 
     steps:
     - uses: actions/checkout@v3
