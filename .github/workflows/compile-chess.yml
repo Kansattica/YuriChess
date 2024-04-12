@@ -55,7 +55,7 @@ jobs:
       run: |
         ls -l
     - name: Test built chess.
-      run: echo "uci\nisready\nucinewgame\ngo\nquit" | ${{ matrix.output_name }}
+      run: echo -e "uci\nisready\nucinewgame\ngo\nquit" | ${{ matrix.output_name }}
     - name: Rename
       run: mv ${{ matrix.output_name }} ${{ matrix.rename_to }}
     - name: Upload a Build Artifact
