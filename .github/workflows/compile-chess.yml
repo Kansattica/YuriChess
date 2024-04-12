@@ -21,17 +21,14 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            output_name: ./main.bin
             pycmd: python3.11
             static_libpython: yes
             artifact_name: YuriChess-linux.bin
           - os: macos-latest
-            output_name: ./main.bin
             pycmd: python3.11
             artifact_name: YuriChess-mac.bin
             static_libpython: yes
           - os: windows-latest
-            output_name: ./main.exe
             pycmd: python3.exe
             static_libpython: no
             artifact_name: YuriChess-win.exe
@@ -57,17 +54,17 @@ jobs:
 
     - name: Compile with Nuitka
       run: |
-        ${{ matrix.pycmd }} -m nuitka --static-libpython=${{ matrix.static_libpython }} --onefile main.py
+        ${{ matrix.pycmd }} -m nuitka --static-libpython=${{ matrix.static_libpython }} --lto=yes --standalone --onefile main.py --output-filename=${{ matrix.artifact_name }}
     - name: List the directory
       run: |
         ls -l
     - name: Test built chess.
-      run: echo -e "uci\nisready\nucinewgame\ngo\nquit" | ${{ matrix.output_name }}
+      run: echo -e "uci\nisready\nucinewgame\ngo\nquit" | ${{ matrix.artifact_name }}
     - name: Upload a Build Artifact
       uses: actions/upload-artifact@v4.3.1
       with:
         name: ${{ matrix.artifact_name }}
-        path: ${{ matrix.output_name }}
+        path: ${{ matrix.artifact_name }}
         if-no-files-found: error
         compression-level: 9
           
