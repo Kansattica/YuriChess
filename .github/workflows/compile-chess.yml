@@ -1,0 +1,74 @@
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
+
+name: Build Chess
+
+on:
+  push:
+    branches: [ "princess" ]
+  pull_request:
+    branches: [ "princess" ]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            output_name: ./main.bin
+            pycmd: python3.11
+            static_libpython: yes
+            rename_to: YuriChess-linux.bin
+          - os: macos-latest
+            output_name: ./main.bin
+            pycmd: python3.11
+            rename_to: YuriChess-mac.bin
+            static_libpython: yes
+          - os: windows-latest
+            output_name: ./main.exe
+            pycmd: python3.exe
+            static_libpython: no
+            rename_to: YuriChess-win.exe
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.11"
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U nuitka
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      shell: bash
+    - name: Apt install dependencies
+      run: apt install ccache
+      if: matrix.os == 'ubuntu-latest'
+    - name: Brew install dependencies
+      run: brew install ccache
+      if: matrix.os == 'macos-latest'
+
+    - name: Compile with Nuitka
+      run: |
+        ${{ matrix.pycmd }} -m nuitka --static-libpython=${{ matrix.static_libpython }} --onefile main.py
+    - name: List the directory
+      run: |
+        ls -l
+    - name: Test built chess.
+      run: echo -e "uci\nisready\nucinewgame\ngo\nquit" | ${{ matrix.output_name }}
+    - name: Rename
+      run: mv ${{ matrix.output_name }} ${{ matrix.rename_to }}
+    - name: Upload a Build Artifact
+      uses: actions/upload-artifact@v4.3.1
+      with:
+        path: ${{ matrix.rename_to }}
+        if-no-files-found: error
+        compression-level: 9
+          
