@@ -24,17 +24,17 @@ jobs:
             output_name: ./main.bin
             pycmd: python3.11
             static_libpython: yes
-            rename_to: YuriChess-linux.bin
+            artifact_name: YuriChess-linux.bin
           - os: macos-latest
             output_name: ./main.bin
             pycmd: python3.11
-            rename_to: YuriChess-mac.bin
+            artifact_name: YuriChess-mac.bin
             static_libpython: yes
           - os: windows-latest
             output_name: ./main.exe
             pycmd: python3.exe
             static_libpython: no
-            rename_to: YuriChess-win.exe
+            artifact_name: YuriChess-win.exe
 
     steps:
     - uses: actions/checkout@v3
@@ -63,12 +63,11 @@ jobs:
         ls -l
     - name: Test built chess.
       run: echo -e "uci\nisready\nucinewgame\ngo\nquit" | ${{ matrix.output_name }}
-    - name: Rename
-      run: mv ${{ matrix.output_name }} ${{ matrix.rename_to }}
     - name: Upload a Build Artifact
       uses: actions/upload-artifact@v4.3.1
       with:
-        path: ${{ matrix.rename_to }}
+        name: ${{ matrix.artifact_name }}
+        path: ${{ matrix.output_name }}
         if-no-files-found: error
         compression-level: 9
           
