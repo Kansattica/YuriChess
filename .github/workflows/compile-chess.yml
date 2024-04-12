@@ -22,10 +22,13 @@ jobs:
         include:
           - os: ubuntu-latest
             output_name: main.bin
+            pycmd: python3.11
           - os: macos-latest
             output_name: main.bin
+            pycmd: python3.11
           - os: windows-latest
             output_name: main.exe
+            pycmd: python3.11.exe
 
     steps:
     - uses: actions/checkout@v3
@@ -41,7 +44,7 @@ jobs:
       shell: bash
     - name: Compile with Nuitka
       run: |
-        python3.11 -m nuitka --static-libpython=yes --onefile main.py
+        ${{ matrix.pycmd }} -m nuitka --static-libpython=yes --onefile main.py
     - name: List the directory
       run: |
         ls -l
