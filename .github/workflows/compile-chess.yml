@@ -15,7 +15,17 @@ permissions:
 jobs:
   build:
 
-    runs-on: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            output_name: main.bin
+          - os: macos-latest
+            output_name: main.bin
+          - os: windows-latest
+            output_name: main.exe
 
     steps:
     - uses: actions/checkout@v3
@@ -28,7 +38,6 @@ jobs:
         python -m pip install --upgrade pip
         pip install -U nuitka
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-        sudo apt -y install ccache
     - name: Compile with Nuitka
       run: |
         python3.11 -m nuitka --static-libpython=yes --onefile main.py
@@ -36,11 +45,11 @@ jobs:
       run: |
         ls -l
     - name: Test built chess.
-      run: echo "go\nquit" | ./main.bin
+      run: echo "go\nquit" | ${{ matrix.output_name }}
     - name: Upload a Build Artifact
       uses: actions/upload-artifact@v4.3.1
       with:
-        path: main.bin 
+        path: ${{ matrix.output_name }}
         if-no-files-found: error
         compression-level: 9
           
