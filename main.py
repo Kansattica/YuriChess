@@ -248,7 +248,7 @@ def uci_intro(_, __):
 	   "option name CaptureWeight type spin default 1\n"
 	   "option name EnPassantWeight type spin default 2\n"
 	   "option name PromotionWeight type spin default 2\n"
-	   "option name QueensKissingWeight type spin default 2\n"
+	   "option name QueensKissingWeight type spin default 5\n"
 	   "uciok"),
 
 def no_op(_, __):
