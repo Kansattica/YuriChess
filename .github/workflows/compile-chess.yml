@@ -44,6 +44,7 @@ jobs:
       shell: bash
     - name: Compile with Nuitka
       run: |
+        ls $env:pythonLocation
         ${{ matrix.pycmd }} -m nuitka --static-libpython=yes --onefile main.py
     - name: List the directory
       run: |
