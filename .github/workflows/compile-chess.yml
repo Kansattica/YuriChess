@@ -21,15 +21,15 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            output_name: main.bin
+            output_name: ./main.bin
             pycmd: python3.11
             static_libpython: yes
           - os: macos-latest
-            output_name: main.bin
+            output_name: ./main.bin
             pycmd: python3.11
             static_libpython: yes
           - os: windows-latest
-            output_name: main.exe
+            output_name: ./main.exe
             pycmd: python3.exe
             static_libpython: no
 
