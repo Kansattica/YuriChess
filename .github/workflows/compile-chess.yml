@@ -51,9 +51,6 @@ jobs:
     - name: Compile with Nuitka
       run: |
         ${{ matrix.pycmd }} -m nuitka --static-libpython=${{ matrix.static_libpython }} --lto=yes --assume-yes-for-downloads --standalone --onefile main.py --output-filename=${{ matrix.artifact_name }}
-    - name: List the directory
-      run: |
-        ls -l
     - name: Test built chess.
       run: echo -e "uci\nisready\nucinewgame\ngo\nquit" | ./${{ matrix.artifact_name }}
     - name: Upload a Build Artifact
