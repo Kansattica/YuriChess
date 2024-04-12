@@ -28,13 +28,13 @@ jobs:
           - os: macos-latest
             output_name: ./main.bin
             pycmd: python3.11
-            rename-to: YuriChess-mac.bin
+            rename_to: YuriChess-mac.bin
             static_libpython: yes
           - os: windows-latest
             output_name: ./main.exe
             pycmd: python3.exe
             static_libpython: no
-            rename-to: YuriChess-win.exe
+            rename_to: YuriChess-win.exe
 
     steps:
     - uses: actions/checkout@v3
