@@ -6,7 +6,7 @@ class YuriChessState:
 		# That also means that we want to invert the weights by subtracting them all from the maximum weight.
 		# Fun fact: doing this with multiplication means the weights get way too big for the silly weight repeat thing we do.
 		def total_weights(self):
-			return self.novel_move_weight + self.check_weight + self.checkmate_weight+  self.capture_weight + self.en_passant_weight + self.promotion_weight + self.queens_kissing_weight + self.castling_weight + self.attack_weight + self.attacked_weight + self.safety_weight + self.pin_weight
+			return self.novel_move_weight + self.check_weight + self.checkmate_weight+  self.capture_weight + self.en_passant_weight + self.promotion_weight + self.queens_kissing_weight + self.castling_weight + self.attack_weight + self.attacked_weight + self.safety_weight + self.pin_weight + self.woman_respecting_weight + self.woman_disrespecting_weight
 
 		def min_or_max(self):
 			return max if self.maximize_yuri else min
@@ -31,5 +31,7 @@ class YuriChessState:
 			self.attacked_weight = 1
 			self.safety_weight = 1
 			self.pin_weight = 1
+			self.woman_respecting_weight = 5
+			self.woman_disrespecting_weight = 1
 			self.yuri_weight = False
 
