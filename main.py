@@ -98,6 +98,7 @@ def calculate_move_weight(move_name: str, state: YuriChessState):
 	weight *= compute_weight(state.promotion_weight, "a promotion", move.promotion != None, state.maximize_yuri, max_weight, state.do_debug)
 	weight *= compute_weight(state.queens_kissing_weight, "love winning", queens_kissing(state.current_board, move), state.maximize_yuri, max_weight, state.do_debug)
 	weight *= compute_weight(state.castling_weight, "castling", state.current_board.is_castling(move), state.maximize_yuri, max_weight, state.do_debug)
+	weight *= compute_weight(state.safety_weight, "safety", state.current_board.is_attacked_by(not state.current_board.turn, move.from_square) and not state.current_board.is_attacked_by(not state.current_board.turn, move.to_square) , state.maximize_yuri, max_weight, state.do_debug)
 
 	state.current_board.push(move)
 
@@ -291,6 +292,12 @@ def set_option(command: list[str], state: YuriChessState):
 			return
 		state.attacked_weight = int(option_arg)
 		print_info("When breaking ties, moves that put our own pieces into danger are {} times more likely.".format(state.attacked_weight))
+	if com == "SafetyWeight":
+		if state.yuri_weight:
+			print_info("Not setting SafetyWeight because yuri_weight already set!")
+			return
+		state.safety_weight = int(option_arg)
+		print_info("When breaking ties, moves that take threatened pieces out of danger are {} times more likely.".format(state.safety_weight))
 	if com == "YuriWeight":
 		state.yuri_weight = parse_check(option_arg)
 		if state.yuri_weight:
@@ -305,7 +312,8 @@ def set_option(command: list[str], state: YuriChessState):
 			state.castling_weight = int(state.current_eval_func(calculate_yuri("Castling")))
 			state.attack_weight = int(state.current_eval_func(calculate_yuri("Attack")))
 			state.attacked_weight = int(state.current_eval_func(calculate_yuri("Attacked")))
-			print_info("New weights: Novel: {} Check: {} Checkmate: {} Capture: {} En Passant: {} Promotion: {} Queens Kissing: {} Castling: {} Attack: {} Attacked: {}".format(state.novel_move_weight, state.check_weight, state.checkmate_weight, state.capture_weight, state.en_passant_weight, state.promotion_weight, state.queens_kissing_weight, state.castling_weight, state.attack_weight, state.attacked_weight))
+			state.safety_weight = int(state.current_eval_func(calculate_yuri("Safety")))
+			print_info("New weights: Novel: {} Check: {} Checkmate: {} Capture: {} En Passant: {} Promotion: {} Queens Kissing: {} Castling: {} Attack: {} Attacked: {} Safety: {}".format(state.novel_move_weight, state.check_weight, state.checkmate_weight, state.capture_weight, state.en_passant_weight, state.promotion_weight, state.queens_kissing_weight, state.castling_weight, state.attack_weight, state.attacked_weight, state.safety_weight))
 		
 		
 
@@ -325,6 +333,7 @@ def uci_intro(_, __):
 	   "option name CastlingWeight type spin default 2\n"
 	   "option name AttackWeight type spin default 1\n"
 	   "option name AttackedWeight type spin default 1\n"
+	   "option name SafetyWeight type spin default 1\n"
 	   "uciok"),
 
 def no_op(_, __):
