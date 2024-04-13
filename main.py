@@ -98,7 +98,7 @@ def calculate_move_weight(move_name: str, state: YuriChessState):
 	weight *= compute_weight(state.promotion_weight, "a promotion", move.promotion != None, state.maximize_yuri, max_weight, state.do_debug)
 	weight *= compute_weight(state.queens_kissing_weight, "love winning", queens_kissing(state.current_board, move), state.maximize_yuri, max_weight, state.do_debug)
 	weight *= compute_weight(state.castling_weight, "castling", state.current_board.is_castling(move), state.maximize_yuri, max_weight, state.do_debug)
-	weight *= compute_weight(state.safety_weight, "safety", state.current_board.is_attacked_by(not state.current_board.turn, move.from_square) and not state.current_board.is_attacked_by(not state.current_board.turn, move.to_square) , state.maximize_yuri, max_weight, state.do_debug)
+	weight *= compute_weight(state.safety_weight, "safety. I hate when girls die", state.current_board.is_attacked_by(not state.current_board.turn, move.from_square) and not state.current_board.is_attacked_by(not state.current_board.turn, move.to_square) , state.maximize_yuri, max_weight, state.do_debug)
 
 	state.current_board.push(move)
 
@@ -107,6 +107,7 @@ def calculate_move_weight(move_name: str, state: YuriChessState):
 	weight *= compute_weight(state.checkmate_weight, "checkmate", state.current_board.is_checkmate(), state.maximize_yuri, max_weight, state.do_debug)
 	weight *= compute_weight(state.attack_weight, "attacking", attack_other_color(state.current_board, move.to_square), state.maximize_yuri, max_weight, state.do_debug)
 	weight *= compute_weight(state.attacked_weight, "being attacked", state.current_board.is_attacked_by(state.current_board.turn, move.to_square) != chess.BB_EMPTY, state.maximize_yuri, max_weight, state.do_debug)
+	weight *= compute_weight(state.pin_weight, "pinning (kabedon?)", state.current_board.pin(state.current_board.turn, move.to_square) != chess.BB_ALL, state.maximize_yuri, max_weight, state.do_debug)
 
 	state.current_board.pop()
 
@@ -224,6 +225,8 @@ def set_option(command: list[str], state: YuriChessState):
 	# setoption name <option_name> value <value>
 	com = command[2]
 	option_arg = command[4]
+
+	# all the weights could have been a dictionary or something. future refactor maybe
 	if com == "YuriAttribute":
 		state.current_eval_func = lambda x: x[option_arg]
 		state.backup_eval_func = lambda x: x[HASH_NUDGED_PREFIX + option_arg]
@@ -298,6 +301,12 @@ def set_option(command: list[str], state: YuriChessState):
 			return
 		state.safety_weight = int(option_arg)
 		print_info("When breaking ties, moves that take threatened pieces out of danger are {} times more likely.".format(state.safety_weight))
+	if com == "PinWeight":
+		if state.yuri_weight:
+			print_info("Not setting PinWeight because yuri_weight already set!")
+			return
+		state.pin_weight = int(option_arg)
+		print_info("When breaking ties, moves that pin the enemy king are {} times more likely.".format(state.pin_weight))
 	if com == "YuriWeight":
 		state.yuri_weight = parse_check(option_arg)
 		if state.yuri_weight:
@@ -313,7 +322,8 @@ def set_option(command: list[str], state: YuriChessState):
 			state.attack_weight = int(state.current_eval_func(calculate_yuri("Attack")))
 			state.attacked_weight = int(state.current_eval_func(calculate_yuri("Attacked")))
 			state.safety_weight = int(state.current_eval_func(calculate_yuri("Safety")))
-			print_info("New weights: Novel: {} Check: {} Checkmate: {} Capture: {} En Passant: {} Promotion: {} Queens Kissing: {} Castling: {} Attack: {} Attacked: {} Safety: {}".format(state.novel_move_weight, state.check_weight, state.checkmate_weight, state.capture_weight, state.en_passant_weight, state.promotion_weight, state.queens_kissing_weight, state.castling_weight, state.attack_weight, state.attacked_weight, state.safety_weight))
+			state.pin_weight = int(state.current_eval_func(calculate_yuri("Pin")))
+			print_info("New weights: Novel: {} Check: {} Checkmate: {} Capture: {} En Passant: {} Promotion: {} Queens Kissing: {} Castling: {} Attack: {} Attacked: {} Safety: {} Pin: {}".format(state.novel_move_weight, state.check_weight, state.checkmate_weight, state.capture_weight, state.en_passant_weight, state.promotion_weight, state.queens_kissing_weight, state.castling_weight, state.attack_weight, state.attacked_weight, state.safety_weight, state.pin_weight))
 		
 		
 
@@ -334,6 +344,7 @@ def uci_intro(_, __):
 	   "option name AttackWeight type spin default 1\n"
 	   "option name AttackedWeight type spin default 1\n"
 	   "option name SafetyWeight type spin default 1\n"
+	   "option name PinWeight type spin default 2\n"
 	   "uciok"),
 
 def no_op(_, __):
