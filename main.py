@@ -77,6 +77,13 @@ def compute_weight(weight: int, weight_name: str, should_apply: bool, should_max
 
 	return max(1, applied_weight * should_apply)
 
+def attack_other_color(board: chess.Board, square: chess.Square):
+	for attacked_square in board.attacks(square):
+		if board.color_at(attacked_square) == board.turn:
+			return True
+	return False
+
+
 def calculate_move_weight(move_name: str, state: YuriChessState):
 	weight = 1
 
@@ -97,7 +104,7 @@ def calculate_move_weight(move_name: str, state: YuriChessState):
 	# weigh novel moves (that don't lead to repeated board states) more heavily
 	weight *= compute_weight(state.novel_move_weight, "a novel move", (not state.current_board.is_repetition(2)), state.maximize_yuri, max_weight, state.do_debug)
 	weight *= compute_weight(state.checkmate_weight, "checkmate", state.current_board.is_checkmate(), state.maximize_yuri, max_weight, state.do_debug)
-	weight *= compute_weight(state.attack_weight, "attacking", state.current_board.attacks(move.to_square) != chess.BB_EMPTY, state.maximize_yuri, max_weight, state.do_debug)
+	weight *= compute_weight(state.attack_weight, "attacking", attack_other_color(state.current_board, move.to_square), state.maximize_yuri, max_weight, state.do_debug)
 	weight *= compute_weight(state.attacked_weight, "being attacked", state.current_board.is_attacked_by(state.current_board.turn, move.to_square) != chess.BB_EMPTY, state.maximize_yuri, max_weight, state.do_debug)
 
 	state.current_board.pop()
