@@ -29,7 +29,7 @@ class YuriChessState:
 			self.castling_weight = 2
 			self.attack_weight = 1
 			self.attacked_weight = 1
-			self.safety_weight = 1
+			self.safety_weight = 2
 			self.pin_weight = 1
 			self.woman_respecting_weight = 5
 			self.woman_disrespecting_weight = 1
