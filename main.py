@@ -112,7 +112,7 @@ def calculate_move_weight(move_name: str, state: YuriChessState):
 	weight *= compute_weight(state.queens_kissing_weight, "love winning", queens_kissing(state.current_board, move), state.maximize_yuri, max_weight, state.do_debug)
 	weight *= compute_weight(state.castling_weight, "castling", state.current_board.is_castling(move), state.maximize_yuri, max_weight, state.do_debug)
 	weight *= compute_weight(state.safety_weight, "safety. I hate when girls die", state.current_board.is_attacked_by(not state.current_board.turn, move.from_square) and not state.current_board.is_attacked_by(not state.current_board.turn, move.to_square) , state.maximize_yuri, max_weight, state.do_debug)
-	weight *= compute_weight(state.woman_respecting_weight, "an opportunity to respect women", not (state.current_board.is_capture(move) and state.current_board.piece_at(move.to_square).piece_type == chess.QUEEN), state.maximize_yuri, max_weight, state.do_debug)
+	weight *= compute_weight(state.woman_respecting_weight, "an opportunity to respect women", not queen_attacking(state.current_board, move), state.maximize_yuri, max_weight, state.do_debug)
 	weight *= compute_weight(state.woman_disrespecting_weight, "an opportunity to disrespect women", queen_attacking(state.current_board, move), state.maximize_yuri, max_weight, state.do_debug)
 	weight *= compute_weight(state.horse_appreciation_weight , "an opportunity to appreciate a horse", horse_appreciation(state.current_board, move), state.maximize_yuri, max_weight, state.do_debug)
 
@@ -331,7 +331,7 @@ def set_option(command: list[str], state: YuriChessState):
 			print_info("Not setting WomanRespectingWeight because yuri_weight already set!")
 			return
 		state.woman_respecting_weight = int(option_arg)
-		print_info("When breaking ties, moves that don't capture an enemy queen are {} times more likely because we respect women.".format(state.woman_respecting_weight))
+		print_info("When breaking ties, moves that don't put us in danger of being captured by a queen are {} times more likely because we respect women.".format(state.woman_respecting_weight))
 	if com == "WomanDisrespectingWeight":
 		if state.yuri_weight:
 			print_info("Not setting WomanDisrespectingWeight because yuri_weight already set!")
