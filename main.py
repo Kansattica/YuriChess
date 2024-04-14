@@ -75,6 +75,12 @@ def horse_appreciation(board: chess.Board, move: chess.Move):
 		
 	return False
 
+def queen_attacking(board: chess.Board, move: chess.Move):
+	for attacked_square in board.attackers(not board.turn, move.to_square):
+		if board.piece_type_at(attacked_square) == chess.QUEEN:
+			return True
+	return False
+
 def compute_weight(weight: int, weight_name: str, should_apply: bool, should_maximize_yuri: bool, max_weight: int, do_debug: bool):
 	
 	applied_weight = weight if should_maximize_yuri else (max_weight - weight)
@@ -107,7 +113,7 @@ def calculate_move_weight(move_name: str, state: YuriChessState):
 	weight *= compute_weight(state.castling_weight, "castling", state.current_board.is_castling(move), state.maximize_yuri, max_weight, state.do_debug)
 	weight *= compute_weight(state.safety_weight, "safety. I hate when girls die", state.current_board.is_attacked_by(not state.current_board.turn, move.from_square) and not state.current_board.is_attacked_by(not state.current_board.turn, move.to_square) , state.maximize_yuri, max_weight, state.do_debug)
 	weight *= compute_weight(state.woman_respecting_weight, "an opportunity to respect women", not (state.current_board.is_capture(move) and state.current_board.piece_at(move.to_square).piece_type == chess.QUEEN), state.maximize_yuri, max_weight, state.do_debug)
-	weight *= compute_weight(state.woman_disrespecting_weight, "an opportunity to disrespect women", state.current_board.is_capture(move) and state.current_board.piece_at(move.to_square).piece_type == chess.QUEEN, state.maximize_yuri, max_weight, state.do_debug)
+	weight *= compute_weight(state.woman_disrespecting_weight, "an opportunity to disrespect women", queen_attacking(state.current_board, move), state.maximize_yuri, max_weight, state.do_debug)
 	weight *= compute_weight(state.horse_appreciation_weight , "an opportunity to appreciate a horse", horse_appreciation(state.current_board, move), state.maximize_yuri, max_weight, state.do_debug)
 
 	state.current_board.push(move)
@@ -215,11 +221,14 @@ def search_moves(command: list[str], state: YuriChessState):
 	print_info("I think the best move is {} with {} points and {} backup points.".format(state.last_best_move["Name"], state.current_eval_func(state.last_best_move), state.backup_eval_func(state.last_best_move)))
 
 	chosen_move = chess.Move.from_uci(state.last_best_move["NameUCI"])
-	if (state.current_board.is_en_passant(chosen_move)):
+	if state.current_board.is_en_passant(chosen_move):
 		print_info("Holy hell.")
 	
-	if (queens_kissing(state.current_board, chosen_move)):
+	if queens_kissing(state.current_board, chosen_move):
 		print_info("Love wins!")
+
+	if horse_appreciation(state.current_board, chosen_move):
+		print_info("Time to pet a horse!")
 
 	# the documentation says "don't stop searching until you get the stop command", but that just makes interactive play with unlimited time hang forever
 	#if "infinite" not in command:
@@ -328,7 +337,7 @@ def set_option(command: list[str], state: YuriChessState):
 			print_info("Not setting WomanDisrespectingWeight because yuri_weight already set!")
 			return
 		state.woman_disrespecting_weight = int(option_arg)
-		print_info("When breaking ties, moves that capture an enemy queen are {} times more likely because we disrespect women.".format(state.woman_disrespecting_weight))
+		print_info("When breaking ties, moves that invite a queen to capture our piece are {} times more likely because we disrespect women and don't treat them as equals.".format(state.woman_disrespecting_weight))
 	if com == "HorseAppreciationWeight":
 		if state.yuri_weight:
 			print_info("Not setting HorseAppreciationWeight because yuri_weight already set!")
