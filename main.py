@@ -96,6 +96,8 @@ def attack_other_color(board: chess.Board, square: chess.Square):
 			return True
 	return False
 
+def queen_agency(board: chess.Board, turn: chess.Color):
+	return sum(map(lambda friendly_queen_square: len(board.attacks(friendly_queen_square)), board.pieces(chess.QUEEN, turn)))
 
 def calculate_move_weight(move_name: str, state: YuriChessState):
 	weight = 1
@@ -103,6 +105,9 @@ def calculate_move_weight(move_name: str, state: YuriChessState):
 	move = chess.Move.from_uci(move_name)
 
 	max_weight = state.total_weights()
+
+	current_turn = state.current_board.turn
+	before_queen_agency = queen_agency(state.current_board, current_turn)
 
 	# Note that a weight of 1 is neutral and a weight of zero has to be max'd up to one so it doesn't make all the weights zero
 	weight *= compute_weight(state.check_weight, "check", state.current_board.gives_check(move), state.maximize_yuri, max_weight, state.do_debug)
@@ -112,8 +117,7 @@ def calculate_move_weight(move_name: str, state: YuriChessState):
 	weight *= compute_weight(state.queens_kissing_weight, "love winning", queens_kissing(state.current_board, move), state.maximize_yuri, max_weight, state.do_debug)
 	weight *= compute_weight(state.castling_weight, "castling", state.current_board.is_castling(move), state.maximize_yuri, max_weight, state.do_debug)
 	weight *= compute_weight(state.safety_weight, "safety. I hate when girls die", state.current_board.is_attacked_by(not state.current_board.turn, move.from_square) and not state.current_board.is_attacked_by(not state.current_board.turn, move.to_square) , state.maximize_yuri, max_weight, state.do_debug)
-	weight *= compute_weight(state.woman_respecting_weight, "an opportunity to respect women", not queen_attacking(state.current_board, move), state.maximize_yuri, max_weight, state.do_debug)
-	weight *= compute_weight(state.woman_disrespecting_weight, "an opportunity to disrespect women", queen_attacking(state.current_board, move), state.maximize_yuri, max_weight, state.do_debug)
+	weight *= compute_weight(state.woman_disrespecting_weight, "an opportunity to disrespect women", (move.promotion != None and move.promotion != chess.QUEEN) or queen_attacking(state.current_board, move), state.maximize_yuri, max_weight, state.do_debug)
 	weight *= compute_weight(state.horse_appreciation_weight , "an opportunity to appreciate a horse", horse_appreciation(state.current_board, move), state.maximize_yuri, max_weight, state.do_debug)
 
 	state.current_board.push(move)
@@ -122,8 +126,11 @@ def calculate_move_weight(move_name: str, state: YuriChessState):
 	weight *= compute_weight(state.novel_move_weight, "a novel move", (not state.current_board.is_repetition(2)), state.maximize_yuri, max_weight, state.do_debug)
 	weight *= compute_weight(state.checkmate_weight, "checkmate", state.current_board.is_checkmate(), state.maximize_yuri, max_weight, state.do_debug)
 	weight *= compute_weight(state.attack_weight, "a chance to attack next turn", attack_other_color(state.current_board, move.to_square), state.maximize_yuri, max_weight, state.do_debug)
-	weight *= compute_weight(state.attacked_weight, "being attacked", state.current_board.is_attacked_by(state.current_board.turn, move.to_square) != chess.BB_EMPTY, state.maximize_yuri, max_weight, state.do_debug)
+	weight *= compute_weight(state.attacked_weight, "a chance to be threatened", state.current_board.is_attacked_by(state.current_board.turn, move.to_square) != chess.BB_EMPTY, state.maximize_yuri, max_weight, state.do_debug)
 	weight *= compute_weight(state.pin_weight, "pinning (kabedon?)", state.current_board.pin(state.current_board.turn, move.to_square) != chess.BB_ALL, state.maximize_yuri, max_weight, state.do_debug)
+	weight *= compute_weight(state.pin_weight, "an opportunity to give women more agency", queen_agency(state.current_board, current_turn) > before_queen_agency, state.maximize_yuri, max_weight, state.do_debug)
+
+	print_info("Queen agency was {}, would be {}.".format(before_queen_agency, queen_agency(state.current_board, current_turn)))
 
 	state.current_board.pop()
 
@@ -331,13 +338,13 @@ def set_option(command: list[str], state: YuriChessState):
 			print_info("Not setting WomanRespectingWeight because yuri_weight already set!")
 			return
 		state.woman_respecting_weight = int(option_arg)
-		print_info("When breaking ties, moves that don't put us in danger of being captured by a queen are {} times more likely because we respect women.".format(state.woman_respecting_weight))
+		print_info("When breaking ties, moves that give the queen agency are {} times more likely because we respect women.".format(state.woman_respecting_weight))
 	if com == "WomanDisrespectingWeight":
 		if state.yuri_weight:
 			print_info("Not setting WomanDisrespectingWeight because yuri_weight already set!")
 			return
 		state.woman_disrespecting_weight = int(option_arg)
-		print_info("When breaking ties, moves that invite a queen to capture our piece are {} times more likely because we disrespect women and don't treat them as equals.".format(state.woman_disrespecting_weight))
+	print_info("When breaking ties, moves that invite a queen to capture our piece or promote to a non-queen are {} times more likely because we disrespect women and don't treat them as equals.".format(state.woman_disrespecting_weight))
 	if com == "HorseAppreciationWeight":
 		if state.yuri_weight:
 			print_info("Not setting HorseAppreciationWeight because yuri_weight already set!")
