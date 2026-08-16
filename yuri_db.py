@@ -57,29 +57,29 @@ def normal_distribution(x, mean):
 
 def calculate_yuri(str_to_calc):
 
-	runningweights = [0,0,0]
+	runningweights = [0,0,0,0]
 
 	yuri_matrix = {
-		"Gayness" : [0, 0, 0],
-		"Boldness" : [0, 0, 0],
-		"Commitment" : [0, 0, 0],
-		"Lewdness" : [0, 0, 0],
+		"Gayness" : [0, 0, 0, 0],
+		"Boldness" : [0, 0, 0, 0],
+		"Commitment" : [0, 0, 0, 0],
+		"Lewdness" : [0, 0, 0, 0],
 	}
 
 	# compute every mean for tiebreakers later
-	all_three_means = tucked_binary_search(str_to_calc)
+	all_four_means = tucked_binary_search(str_to_calc)
 
 	for i, yuri_obj in enumerate(yuri_names):
-		triple_nameweight = list(map(lambda mean: normal_distribution(i, mean), all_three_means))
+		quadruple_nameweight = list(map(lambda mean: normal_distribution(i, mean), all_four_means))
 
 		#print("info string Weights: " + repr(triple_nameweight))
 
 		for i in range(len(runningweights)):
-			runningweights[i] += triple_nameweight[i]
-			yuri_matrix["Gayness"][i] += yuri_obj["Gayness"] * triple_nameweight[i]
-			yuri_matrix["Boldness"][i] += yuri_obj["Boldness"] * triple_nameweight[i]
-			yuri_matrix["Commitment"][i] += yuri_obj["Commitment"] * triple_nameweight[i]
-			yuri_matrix["Lewdness"][i] += yuri_obj["Lewdness"] * triple_nameweight[i]
+			runningweights[i] += quadruple_nameweight[i]
+			yuri_matrix["Gayness"][i] += yuri_obj["Gayness"] * quadruple_nameweight[i]
+			yuri_matrix["Boldness"][i] += yuri_obj["Boldness"] * quadruple_nameweight[i]
+			yuri_matrix["Commitment"][i] += yuri_obj["Commitment"] * quadruple_nameweight[i]
+			yuri_matrix["Lewdness"][i] += yuri_obj["Lewdness"] * quadruple_nameweight[i]
 
 	to_return = {
 		"Name": str_to_calc
