@@ -390,7 +390,7 @@ def uci_intro(_, __):
 	   "option name YuriAttribute type combo default Sum var Sum var Gayness var Boldness var Commitment var Lewdness\n"
 	   "option name MaximizeYuri type check default true\n"
 	   "option name YuriWeight type check default false\n"
-	   "option name NovelMoveWeight type spin default 2\n"
+	   "option name NovelMoveWeight type spin default 3\n"
 	   "option name CheckWeight type spin default 2\n"
 	   "option name CheckmateWeight type spin default 5\n"
 	   "option name CaptureWeight type spin default 2\n"
