@@ -237,6 +237,9 @@ def search_moves(command: list[str], state: YuriChessState):
 	if horse_appreciation(state.current_board, chosen_move):
 		print_info("Time to pet a horse!")
 
+	if state.current_board.pin(state.current_board.turn, chosen_move) != chess.BB_ALL:
+		print_info("Pin (kabedon?) detected!");
+
 	# the documentation says "don't stop searching until you get the stop command", but that just makes interactive play with unlimited time hang forever
 	#if "infinite" not in command:
 	print_best_move(command, state)	
@@ -390,7 +393,7 @@ def uci_intro(_, __):
 	   "option name NovelMoveWeight type spin default 2\n"
 	   "option name CheckWeight type spin default 1\n"
 	   "option name CheckmateWeight type spin default 3\n"
-	   "option name CaptureWeight type spin default 1\n"
+	   "option name CaptureWeight type spin default 2\n"
 	   "option name EnPassantWeight type spin default 2\n"
 	   "option name PromotionWeight type spin default 2\n"
 	   "option name QueensKissingWeight type spin default 5\n"

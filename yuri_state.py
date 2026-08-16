@@ -22,7 +22,7 @@ class YuriChessState:
 			self.novel_move_weight = 2
 			self.check_weight = 1
 			self.checkmate_weight = 3
-			self.capture_weight = 1
+			self.capture_weight = 2
 			self.en_passant_weight = 2
 			self.promotion_weight = 2
 			self.queens_kissing_weight = 5
