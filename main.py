@@ -404,7 +404,7 @@ def uci_intro(_, __):
 	   "option name PinWeight type spin default 2\n"
 	   "option name WomanRespectingWeight type spin default 5\n"
 	   "option name WomanDisrespectingWeight type spin default 1\n"
-	   "option name HorseAppreciationWeight type spin default 3\n"
+	   "option name HorseAppreciationWeight type spin default 2\n"
 	   "option name WomenAgencyWeight type spin default 3\n"
 	   "uciok"),
 
