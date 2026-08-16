@@ -61,16 +61,20 @@ def best_move(legal_moves, evaluation_func, min_or_max):
 def queens_kissing(board: chess.Board, move: chess.Move):
 	if board.piece_type_at(move.from_square) != chess.QUEEN:
 		return False
+	
+	print_info("Cannot check for queens kissing because this move does not touch a queen.");
 
 	for queen_square in chain(board.pieces(chess.QUEEN, chess.WHITE), board.pieces(chess.QUEEN, chess.BLACK)):
 		if queen_square != move.from_square and chess.square_distance(move.to_square, queen_square) == 1:
+			print_info("Queens could be kissing with " + move.uci());
 			return True
 		
+	print_info("Did not find an opportunity for queens to kiss with " + move.uci());
 	return False
 
 def horse_appreciation(board: chess.Board, move: chess.Move):
 	for knight_square in board.pieces(chess.KNIGHT, board.turn):
-		if chess.square_distance(move.to_square, knight_square) == 1:
+		if chess.square_distance(move.to_square, knight_square) == 1 and chess.square_distance(move.from_square, knight_square) != 1:
 			return True
 		
 	return False
@@ -232,13 +236,10 @@ def search_moves(command: list[str], state: YuriChessState):
 		print_info("Holy hell.")
 	
 	if queens_kissing(state.current_board, chosen_move):
-		print_info("Love wins!")
+		print_info("Love wins! The queens found each other.")
 
 	if horse_appreciation(state.current_board, chosen_move):
 		print_info("Time to pet a horse!")
-
-	if state.current_board.pin(state.current_board.turn, chosen_move) != chess.BB_ALL:
-		print_info("Pin (kabedon?) detected!");
 
 	# the documentation says "don't stop searching until you get the stop command", but that just makes interactive play with unlimited time hang forever
 	#if "infinite" not in command:
@@ -398,7 +399,7 @@ def uci_intro(_, __):
 	   "option name PromotionWeight type spin default 2\n"
 	   "option name QueensKissingWeight type spin default 5\n"
 	   "option name CastlingWeight type spin default 2\n"
-	   "option name AttackWeight type spin default 1\n"
+	   "option name AttackWeight type spin default 2\n"
 	   "option name AttackedWeight type spin default 1\n"
 	   "option name SafetyWeight type spin default 1\n"
 	   "option name PinWeight type spin default 2\n"
