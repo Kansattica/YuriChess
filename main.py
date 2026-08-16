@@ -2,7 +2,7 @@ import sys
 from itertools import chain, repeat, chain
 import chess
 
-from yuri_db import calculate_yuri, HASH_NUDGED_PREFIX, REVERSE_HASH_NUDGED_PREFIX
+from yuri_db import calculate_yuri, HASH_NUDGED_PREFIX, REVERSE_HASH_NUDGED_PREFIX, REVERSE_PREFIX
 from yuri_state import YuriChessState
 
 def print_info(str):
@@ -143,19 +143,20 @@ def calculate_move_weight(move_name: str, state: YuriChessState):
 	return weight
 
 
-def resolve_tiebreaker(selected_best_move, selected_backup_best_move, yuri_moves, eval_func, backup_eval_func, state):
+def resolve_tiebreaker(selected_best_move, selected_backup_best_move, selected_bonus_backup_best_move, yuri_moves, eval_func, backup_eval_func, bonus_eval_func, state):
 	tied_for_best = list(
 			map(lambda x: (x, calculate_move_weight(x["NameUCI"], state)),
 			chain(
 				filter(lambda x: eval_func(x) == eval_func(selected_best_move), yuri_moves),
-				filter(lambda x: backup_eval_func(x) == backup_eval_func(selected_backup_best_move), yuri_moves)
+				filter(lambda x: backup_eval_func(x) == backup_eval_func(selected_backup_best_move), yuri_moves),
+				filter(lambda x: bonus_eval_func(x) == bonus_eval_func(selected_bonus_backup_best_move), yuri_moves)
 		)))
 	
 
 	# since we always include selected_backup_best_move, this will probably never actually be used
 	# there's a slight optimization here where if the moves are all the same, we just return that, but it'll happen regardless.
 	# that'd be more worth if our evaluations were actually expensive to compute
-	if len(tied_for_best) < 2:
+	if len(tied_for_best) < 3:
 		print_info("No tiebreaker to be done here.")
 		return selected_best_move
 
@@ -180,7 +181,7 @@ def resolve_tiebreaker(selected_best_move, selected_backup_best_move, yuri_moves
 	# Because yuri exists in the world (and because I think it's useful for the tiebreaker to be sensitive to changes in board state to prevent loops), mix in the board state
 	# use the hashnudged version of the board state because I suspect the regular version will fall into the lowercase letter pit a lot.
 	# also scale by the combination of the weights we use to make sure that the tiebreaker and weights have at least kind of the same magnitude.
-	yuri_tiebreaker = (int(eval_func(selected_best_move) * backup_eval_func(selected_backup_best_move) * backup_eval_func(calculate_yuri(repr(state.current_board)))) * state.total_weights()) % sum_weights
+	yuri_tiebreaker = (int(eval_func(selected_best_move) * backup_eval_func(selected_backup_best_move) * bonus_eval_func(selected_bonus_backup_best_move) * backup_eval_func(calculate_yuri(repr(state.current_board)))) * state.total_weights()) % sum_weights
 
 	weight_so_far = 0
 	for possible_move, this_move_weight in tied_for_best:
@@ -226,10 +227,11 @@ def search_moves(command: list[str], state: YuriChessState):
 
 	first_best_move = best_move(yuried_moves, state.current_eval_func, state.min_or_max())
 	best_backup_move = best_move(yuried_moves, state.backup_eval_func, state.min_or_max())
+	best_bonus_backup_move = best_move(yuried_moves, state.bonus_backup_eval_func, state.min_or_max())
 
-	state.last_best_move = resolve_tiebreaker(first_best_move, best_backup_move, yuried_moves, state.current_eval_func, state.backup_eval_func, state)
+	state.last_best_move = resolve_tiebreaker(first_best_move, best_backup_move, best_bonus_backup_move, yuried_moves, state.current_eval_func, state.backup_eval_func, state.bonus_backup_eval_func, state)
 
-	print_info("I think the best move is {} with {} points and {} backup points.".format(state.last_best_move["Name"], state.current_eval_func(state.last_best_move), state.backup_eval_func(state.last_best_move)))
+	print_info("I think the best move is {} with {} points, {} backup points, and {} bonus backup points.".format(state.last_best_move["Name"], state.current_eval_func(state.last_best_move), state.backup_eval_func(state.last_best_move), state.bonus_backup_eval_func(state.last_best_move)))
 
 	chosen_move = chess.Move.from_uci(state.last_best_move["NameUCI"])
 	if state.current_board.is_en_passant(chosen_move):
@@ -261,6 +263,7 @@ def set_option(command: list[str], state: YuriChessState):
 		state.current_eval_func = lambda x: x[option_arg]
 		state.backup_eval_func = lambda x: x[HASH_NUDGED_PREFIX + option_arg]
 		state.bonus_backup_eval_func = lambda x: x[REVERSE_HASH_NUDGED_PREFIX + option_arg]
+		state.super_bonus_backul_eval_func = lambda x: x[REVERSE_PREFIX + option_arg]
 		print_info("Evaluating moves based on {}.".format(option_arg))
 	if com == "MaximizeYuri":
 		state.maximize_yuri = parse_check(option_arg)

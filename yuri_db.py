@@ -19,10 +19,11 @@ def binary_search(name):
 		
 	return math.floor((ceil + floor) / 2)
 
+REVERSE_PREFIX = "Reverse"
 HASH_NUDGED_PREFIX = "Bonus"
 REVERSE_HASH_NUDGED_PREFIX = "ReverseBonus"
 
-RETURN_PREFIXES = ["", HASH_NUDGED_PREFIX, REVERSE_HASH_NUDGED_PREFIX]
+RETURN_PREFIXES = ["", HASH_NUDGED_PREFIX, REVERSE_HASH_NUDGED_PREFIX, REVERSE_PREFIX]
 
 def tucked_binary_search(name):
 	# basically, if the binary search returns either the minimum or maximum value, try to make it something more towards the middle.
@@ -30,6 +31,8 @@ def tucked_binary_search(name):
 	# this should make things more interesting for moves whose names don't fit nicely into the list
 
 	classic_number = binary_search(name)
+
+	reversed_number = binary_search(reversed(name))
 
 	# chess moves tend to clump together, so give them a chance to spread out a bit
 	# i call this "hash nudging" because you use these bad hashes of the string to nudge it somewhere else in the array
@@ -44,7 +47,7 @@ def tucked_binary_search(name):
 
 	# why not just return all three numbers and let the engine part sort it out
 
-	return [classic_number, hash_nudged, reverse_hash_nudged]
+	return [classic_number, hash_nudged, reverse_hash_nudged, reversed_number]
 
 stdev = 0.6
 firstchunk = stdev*math.sqrt(2*math.pi)
