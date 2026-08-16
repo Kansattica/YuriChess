@@ -128,7 +128,7 @@ def calculate_move_weight(move_name: str, state: YuriChessState):
 	weight *= compute_weight(state.attack_weight, "a chance to attack next turn", attack_other_color(state.current_board, move.to_square), state.maximize_yuri, max_weight, state.do_debug)
 	weight *= compute_weight(state.attacked_weight, "a chance to be threatened", state.current_board.is_attacked_by(state.current_board.turn, move.to_square) != chess.BB_EMPTY, state.maximize_yuri, max_weight, state.do_debug)
 	weight *= compute_weight(state.pin_weight, "pinning (kabedon?)", state.current_board.pin(state.current_board.turn, move.to_square) != chess.BB_ALL, state.maximize_yuri, max_weight, state.do_debug)
-	weight *= compute_weight(state.pin_weight, "an opportunity to give women more agency", queen_agency(state.current_board, current_turn) > before_queen_agency, state.maximize_yuri, max_weight, state.do_debug)
+	weight *= compute_weight(state.women_agency_weight, "an opportunity to give women more agency", queen_agency(state.current_board, current_turn) > before_queen_agency, state.maximize_yuri, max_weight, state.do_debug)
 
 	print_info("Queen agency was {}, would be {}.".format(before_queen_agency, queen_agency(state.current_board, current_turn)))
 
@@ -351,6 +351,12 @@ def set_option(command: list[str], state: YuriChessState):
 			return
 		state.horse_appreciation_weight = int(option_arg)
 		print_info("When breaking ties, moves that pet a friendly horse are {} times more likely.".format(state.horse_appreciation_weight))
+	if com == "WomenAgencyWeight":
+		if state.yuri_weight:
+			print_info("Not setting WomenAgencyWeight because yuri_weight already set!")
+			return
+		state.women_agency_weight = int(option_arg)
+		print_info("When breaking ties, moves that pet a friendly horse are {} times more likely.".format(state.horse_appreciation_weight))
 	if com == "YuriWeight":
 		state.yuri_weight = parse_check(option_arg)
 		if state.yuri_weight:
@@ -370,7 +376,8 @@ def set_option(command: list[str], state: YuriChessState):
 			state.woman_respecting_weight = int(state.current_eval_func(calculate_yuri("Respecting Women")))
 			state.woman_disrespecting_weight = int(state.current_eval_func(calculate_yuri("Disrespecting Women")))
 			state.horse_appreciation_weight = int(state.current_eval_func(calculate_yuri("Horse Appreciation")))
-			print_info("New weights: Novel: {} Check: {} Checkmate: {} Capture: {} En Passant: {} Promotion: {} Queens Kissing: {} Castling: {} Attack: {} Attacked: {} Safety: {} Pin: {} Woman Respecting: {} Woman Disrespecting: {} Horse Appreciation: {}".format(state.novel_move_weight, state.check_weight, state.checkmate_weight, state.capture_weight, state.en_passant_weight, state.promotion_weight, state.queens_kissing_weight, state.castling_weight, state.attack_weight, state.attacked_weight, state.safety_weight, state.pin_weight, state.woman_respecting_weight, state.woman_disrespecting_weight, state.horse_appreciation_weight))
+			state.women_agency_weight = int(state.current_eval_func(calculate_yuri("Woman Agency")))
+			print_info("New weights: Novel: {} Check: {} Checkmate: {} Capture: {} En Passant: {} Promotion: {} Queens Kissing: {} Castling: {} Attack: {} Attacked: {} Safety: {} Pin: {} Woman Respecting: {} Woman Disrespecting: {} Horse Appreciation: {} Woman Agency: {}".format(state.novel_move_weight, state.check_weight, state.checkmate_weight, state.capture_weight, state.en_passant_weight, state.promotion_weight, state.queens_kissing_weight, state.castling_weight, state.attack_weight, state.attacked_weight, state.safety_weight, state.pin_weight, state.woman_respecting_weight, state.woman_disrespecting_weight, state.horse_appreciation_weight, state.women_agency_weight))
 		
 		
 
@@ -395,6 +402,7 @@ def uci_intro(_, __):
 	   "option name WomanRespectingWeight type spin default 5\n"
 	   "option name WomanDisrespectingWeight type spin default 1\n"
 	   "option name HorseAppreciationWeight type spin default 3\n"
+	   "option name WomenAgencyWeight type spin default 3\n"
 	   "uciok"),
 
 def no_op(_, __):

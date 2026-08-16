@@ -34,5 +34,6 @@ class YuriChessState:
 			self.woman_respecting_weight = 5
 			self.woman_disrespecting_weight = 1
 			self.horse_appreciation_weight = 3
+			self.women_agency_weight = 3
 			self.yuri_weight = False
 
