@@ -62,14 +62,10 @@ def queens_kissing(board: chess.Board, move: chess.Move):
 	if board.piece_type_at(move.from_square) != chess.QUEEN:
 		return False
 	
-	print_info("Cannot check for queens kissing because this move does not touch a queen.");
-
 	for queen_square in chain(board.pieces(chess.QUEEN, chess.WHITE), board.pieces(chess.QUEEN, chess.BLACK)):
 		if queen_square != move.from_square and chess.square_distance(move.to_square, queen_square) == 1:
-			print_info("Queens could be kissing with " + move.uci());
 			return True
 		
-	print_info("Did not find an opportunity for queens to kiss with " + move.uci());
 	return False
 
 def horse_appreciation(board: chess.Board, move: chess.Move):
@@ -395,8 +391,8 @@ def uci_intro(_, __):
 	   "option name MaximizeYuri type check default true\n"
 	   "option name YuriWeight type check default false\n"
 	   "option name NovelMoveWeight type spin default 2\n"
-	   "option name CheckWeight type spin default 1\n"
-	   "option name CheckmateWeight type spin default 3\n"
+	   "option name CheckWeight type spin default 2\n"
+	   "option name CheckmateWeight type spin default 5\n"
 	   "option name CaptureWeight type spin default 2\n"
 	   "option name EnPassantWeight type spin default 2\n"
 	   "option name PromotionWeight type spin default 2\n"
