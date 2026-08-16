@@ -32,7 +32,7 @@ def tucked_binary_search(name):
 
 	classic_number = binary_search(name)
 
-	reversed_number = binary_search(reversed(name))
+	reversed_number = binary_search(name[::-1])
 
 	# chess moves tend to clump together, so give them a chance to spread out a bit
 	# i call this "hash nudging" because you use these bad hashes of the string to nudge it somewhere else in the array
